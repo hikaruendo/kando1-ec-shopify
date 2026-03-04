@@ -7,6 +7,7 @@ MVP-B: 大量バリアント向け価格一括更新アプリ（まずはAPI土�
 - `POST /api/apply` 差分だけ価格更新（ジョブ化）
 - `GET /api/jobs/:jobId` ジョブ確認
 - `POST /api/jobs/:jobId/undo` 直前ジョブ復元
+- Rule Builder + Previewの最小UI（`GET /`）
 
 > デフォルトは `MOCK_MODE=true` なので、Shopify接続なしで挙動確認できます。
 
