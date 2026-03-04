@@ -4,9 +4,36 @@ const conditionTpl = document.getElementById('conditionTpl');
 const summaryEl = document.getElementById('summary');
 const resultEl = document.getElementById('result');
 
-function addCondition(container) {
+function parseCsvValues(input) {
+  return String(input ?? '')
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
+function serializeConditionValue(value) {
+  if (Array.isArray(value)) return value.join(', ');
+  return String(value ?? '');
+}
+
+function syncConditionInput(conditionEl) {
+  const op = conditionEl.querySelector('.op').value;
+  const valueInput = conditionEl.querySelector('.value');
+  if (op === 'in') {
+    valueInput.placeholder = 'Black1, Black2, Black3';
+  } else {
+    valueInput.placeholder = 'value';
+  }
+}
+
+function addCondition(container, seed = {}) {
   const node = conditionTpl.content.firstElementChild.cloneNode(true);
+  node.querySelector('.field').value = seed.field ?? 'option1';
+  node.querySelector('.op').value = seed.op ?? 'startsWith';
+  node.querySelector('.value').value = serializeConditionValue(seed.value);
+  node.querySelector('.op').onchange = () => syncConditionInput(node);
   node.querySelector('.removeCondition').onclick = () => node.remove();
+  syncConditionInput(node);
   container.appendChild(node);
 }
 
@@ -23,11 +50,7 @@ function addRule(seed = {}) {
 
   const conditions = seed.conditions?.length ? seed.conditions : [{ field: 'option1', op: 'startsWith', value: 'Black' }];
   for (const c of conditions) {
-    addCondition(conditionsEl);
-    const last = conditionsEl.lastElementChild;
-    last.querySelector('.field').value = c.field;
-    last.querySelector('.op').value = c.op;
-    last.querySelector('.value').value = c.value;
+    addCondition(conditionsEl, c);
   }
 
   rulesEl.appendChild(node);
@@ -36,11 +59,15 @@ function addRule(seed = {}) {
 function collectRules() {
   return [...rulesEl.querySelectorAll('.rule')].map(rule => ({
     priority: Number(rule.querySelector('.priority').value || 999),
-    conditions: [...rule.querySelectorAll('.condition')].map(c => ({
-      field: c.querySelector('.field').value,
-      op: c.querySelector('.op').value,
-      value: c.querySelector('.value').value
-    })),
+    conditions: [...rule.querySelectorAll('.condition')].map(c => {
+      const op = c.querySelector('.op').value;
+      const rawValue = c.querySelector('.value').value;
+      return {
+        field: c.querySelector('.field').value,
+        op,
+        value: op === 'in' ? parseCsvValues(rawValue) : rawValue
+      };
+    }),
     action: {
       type: rule.querySelector('.actionType').value,
       value: Number(rule.querySelector('.actionValue').value || 0)
@@ -102,7 +129,7 @@ document.getElementById('apply').onclick = async () => {
 addRule({
   priority: 1,
   conditions: [
-    { field: 'option1', op: 'startsWith', value: 'Black' },
+    { field: 'option1', op: 'in', value: ['Black1', 'Black2', 'Black3', 'Black4', 'Black5'] },
     { field: 'option2', op: 'equals', value: 'Pro' }
   ],
   action: { type: 'add', value: 300 }

@@ -1,5 +1,15 @@
 import { toMoney } from './types.js';
 
+function parseInValues(value) {
+  if (Array.isArray(value)) {
+    return value.map(v => String(v).trim()).filter(Boolean);
+  }
+  return String(value ?? '')
+    .split(',')
+    .map(v => v.trim())
+    .filter(Boolean);
+}
+
 function matchCondition(variant, c) {
   const raw = String(variant[c.field] ?? '');
   const val = String(c.value ?? '');
@@ -7,6 +17,7 @@ function matchCondition(variant, c) {
     case 'equals': return raw === val;
     case 'contains': return raw.includes(val);
     case 'startsWith': return raw.startsWith(val);
+    case 'in': return parseInValues(c.value).includes(raw);
     default: return false;
   }
 }

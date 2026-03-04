@@ -8,6 +8,7 @@ MVP-B: 大量バリアント向け価格一括更新アプリ（まずはAPI土�
 - `GET /api/jobs/:jobId` ジョブ確認
 - `POST /api/jobs/:jobId/undo` 直前ジョブ復元
 - Rule Builder + Previewの最小UI（`GET /`）
+- 条件演算子 `in`（カンマ区切り複数値 / 配列）対応
 
 > デフォルトは `MOCK_MODE=true` なので、Shopify接続なしで挙動確認できます。
 
@@ -28,7 +29,7 @@ curl -X POST http://localhost:8787/api/simulate \
       {
         "priority":1,
         "conditions":[
-          {"field":"option1","op":"startsWith","value":"Black"},
+          {"field":"option1","op":"in","value":["Black1","Black2","Black3","Black4","Black5"]},
           {"field":"option2","op":"equals","value":"Pro"}
         ],
         "action":{"type":"add","value":300}
