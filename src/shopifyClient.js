@@ -10,21 +10,31 @@ const {
 
 const mockMode = MOCK_MODE === 'true';
 
-async function gql(query, variables) {
-  const res = await fetch(`https://${SHOPIFY_SHOP_DOMAIN}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, {
+function resolveShopAndToken(context = {}) {
+  const shop = String(context.shop || SHOPIFY_SHOP_DOMAIN || '').trim();
+  const accessToken = String(context.accessToken || SHOPIFY_ADMIN_ACCESS_TOKEN || '').trim();
+  if (!shop) throw new Error('shop is required');
+  if (!accessToken) throw new Error('access token is required');
+  return { shop, accessToken };
+}
+
+async function gql(query, variables, context = {}) {
+  const { shop, accessToken } = resolveShopAndToken(context);
+  const res = await fetch(`https://${shop}/admin/api/${SHOPIFY_API_VERSION}/graphql.json`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      'X-Shopify-Access-Token': SHOPIFY_ADMIN_ACCESS_TOKEN
+      'X-Shopify-Access-Token': accessToken
     },
     body: JSON.stringify({ query, variables })
   });
+  if (!res.ok) throw new Error(`Shopify GraphQL error: ${res.status} ${await res.text()}`);
   const json = await res.json();
   if (json.errors) throw new Error(JSON.stringify(json.errors));
   return json.data;
 }
 
-export async function fetchVariantsByProductId(productId) {
+export async function fetchVariantsByProductId(productId, context = {}) {
   if (mockMode) return structuredClone(mockVariants);
 
   const query = `
@@ -42,7 +52,7 @@ export async function fetchVariantsByProductId(productId) {
     }
   `;
 
-  const data = await gql(query, { id: productId });
+  const data = await gql(query, { id: productId }, context);
   const nodes = data?.product?.variants?.nodes || [];
   return nodes.map(n => ({
     id: n.id,
@@ -53,7 +63,7 @@ export async function fetchVariantsByProductId(productId) {
   }));
 }
 
-export async function updateVariantPrice(variantId, price) {
+export async function updateVariantPrice(variantId, price, context = {}) {
   if (mockMode) return { ok: true, mock: true };
 
   const mutation = `
@@ -65,7 +75,7 @@ export async function updateVariantPrice(variantId, price) {
     }
   `;
 
-  const data = await gql(mutation, { input: { id: variantId, price: String(price) } });
+  const data = await gql(mutation, { input: { id: variantId, price: String(price) } }, context);
   const errs = data?.productVariantUpdate?.userErrors || [];
   if (errs.length) throw new Error(JSON.stringify(errs));
   return { ok: true };

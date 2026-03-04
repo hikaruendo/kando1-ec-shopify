@@ -4,7 +4,26 @@ const conditionTpl = document.getElementById('conditionTpl');
 const summaryEl = document.getElementById('summary');
 const resultEl = document.getElementById('result');
 const productIdEl = document.getElementById('productId');
+const shopEl = document.getElementById('shop');
+const shopStatusEl = document.getElementById('shopStatus');
+const connectShopBtn = document.getElementById('connectShop');
 let valueCandidatesCache = null;
+
+const SHOP_RE = /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i;
+
+function normalizeShop(input) {
+  const shop = String(input || '').trim().toLowerCase();
+  return SHOP_RE.test(shop) ? shop : '';
+}
+
+function escapeHtml(input) {
+  return String(input || '')
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
 
 function parseCsvValues(input) {
   return String(input ?? '')
@@ -22,6 +41,43 @@ function serializeConditionValue(value) {
 
 function getProductId() {
   return productIdEl.value.trim();
+}
+
+function getShop() {
+  return normalizeShop(shopEl.value);
+}
+
+function getAuthUrl(shop) {
+  return `/auth?shop=${encodeURIComponent(shop)}`;
+}
+
+function renderRequestError(prefix, error) {
+  if (error?.authUrl) {
+    summaryEl.innerHTML = `${escapeHtml(prefix)}: ${escapeHtml(error.message || error)} <a href="${error.authUrl}">Connect shop</a>`;
+    return;
+  }
+  summaryEl.textContent = `${prefix}: ${String(error.message || error)}`;
+}
+
+async function refreshShopStatus() {
+  const shop = getShop();
+  if (!shop) {
+    shopStatusEl.textContent = 'MOCK_MODE=true なら shop 未入力でも動作します。';
+    return;
+  }
+
+  try {
+    const res = await fetch(`/api/auth/status?shop=${encodeURIComponent(shop)}`);
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || 'status check failed');
+    if (data.connected) {
+      shopStatusEl.textContent = `Connected: ${shop} (${data.source})`;
+    } else {
+      shopStatusEl.innerHTML = `Not connected: ${shop}. <a href="${getAuthUrl(shop)}">Connect now</a>`;
+    }
+  } catch (e) {
+    shopStatusEl.textContent = `Status check failed: ${String(e.message || e)}`;
+  }
 }
 
 function indexCandidateValues(diffs) {
@@ -45,10 +101,12 @@ function indexCandidateValues(diffs) {
 async function ensureValueCandidates() {
   const productId = getProductId();
   if (!productId) throw new Error('productId required');
-  if (valueCandidatesCache?.productId === productId) return valueCandidatesCache;
+  const shop = getShop();
+  if (valueCandidatesCache?.productId === productId && valueCandidatesCache?.shop === shop) return valueCandidatesCache;
 
   const sim = await request('/api/simulate', []);
   valueCandidatesCache = {
+    shop,
     productId,
     byField: indexCandidateValues(sim.diffs)
   };
@@ -198,14 +256,24 @@ function collectRules() {
 
 async function request(path, rules = collectRules()) {
   const productId = getProductId();
-  const body = { productId, rules };
+  const shop = getShop();
+  const body = { productId, shop, rules };
   const res = await fetch(path, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
     body: JSON.stringify(body)
   });
-  if (!res.ok) throw new Error(await res.text());
-  return await res.json();
+  let payload;
+  const contentType = res.headers.get('content-type') || '';
+  if (contentType.includes('application/json')) payload = await res.json();
+  else payload = await res.text();
+
+  if (!res.ok) {
+    const err = new Error(typeof payload === 'object' ? payload?.error || JSON.stringify(payload) : String(payload));
+    if (payload?.authUrl) err.authUrl = payload.authUrl;
+    throw err;
+  }
+  return payload;
 }
 
 function renderSim(data) {
@@ -232,6 +300,18 @@ document.getElementById('addRule').onclick = () => addRule();
 productIdEl.oninput = () => {
   valueCandidatesCache = null;
 };
+shopEl.oninput = () => {
+  valueCandidatesCache = null;
+  refreshShopStatus();
+};
+connectShopBtn.onclick = () => {
+  const shop = getShop();
+  if (!shop) {
+    shopStatusEl.textContent = 'shop domain is invalid. example: your-store.myshopify.com';
+    return;
+  }
+  window.location.href = getAuthUrl(shop);
+};
 document.addEventListener('click', event => {
   if (!event.target.closest('.condition')) closeAllPickers();
 });
@@ -241,7 +321,7 @@ document.getElementById('simulate').onclick = async () => {
     const data = await request('/api/simulate');
     renderSim(data);
   } catch (e) {
-    summaryEl.textContent = `simulate error: ${String(e.message || e)}`;
+    renderRequestError('simulate error', e);
   }
 };
 
@@ -250,7 +330,7 @@ document.getElementById('apply').onclick = async () => {
     const data = await request('/api/apply');
     summaryEl.innerHTML = `<b>apply done</b>: jobId=${data.jobId}, changed=${data.changedCount}, errors=${data.errorCount}`;
   } catch (e) {
-    summaryEl.textContent = `apply error: ${String(e.message || e)}`;
+    renderRequestError('apply error', e);
   }
 };
 
@@ -262,3 +342,13 @@ addRule({
   ],
   action: { type: 'add', value: 300 }
 });
+
+(() => {
+  const qs = new URLSearchParams(window.location.search);
+  const shop = normalizeShop(qs.get('shop'));
+  if (shop) shopEl.value = shop;
+  if (qs.get('installed') === '1') {
+    summaryEl.innerHTML = '<b>shop connected</b>: OAuth completed';
+  }
+  refreshShopStatus();
+})();

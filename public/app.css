@@ -6,6 +6,7 @@ h2 { margin: 8px 0; font-size: 16px; }
 label { font-size: 13px; color: #555; }
 input, select, button { padding: 8px 10px; border-radius: 8px; border: 1px solid #d0d0d0; }
 button { cursor: pointer; }
+.hint { font-size: 12px; color: #666; margin: 6px 0 12px; }
 .warn { background: #111; color: #fff; }
 .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
 .between { justify-content: space-between; }
