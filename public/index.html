@@ -55,20 +55,27 @@
     </template>
 
     <template id="conditionTpl">
-      <div class="row condition">
-        <select class="field">
-          <option value="option1">option1</option>
-          <option value="option2">option2</option>
-          <option value="title">title</option>
-        </select>
-        <select class="op">
-          <option value="equals">equals</option>
-          <option value="contains">contains</option>
-          <option value="startsWith">startsWith</option>
-          <option value="in">in (comma-separated)</option>
-        </select>
-        <input class="value" placeholder="value" />
-        <button type="button" class="removeCondition">x</button>
+      <div class="condition">
+        <div class="row">
+          <select class="field">
+            <option value="option1">option1</option>
+            <option value="option2">option2</option>
+            <option value="title">title</option>
+          </select>
+          <select class="op">
+            <option value="equals">equals</option>
+            <option value="contains">contains</option>
+            <option value="startsWith">startsWith</option>
+            <option value="in">in (multi-select)</option>
+          </select>
+          <input class="value" placeholder="value" />
+          <button type="button" class="pickValues hidden">Pick</button>
+          <button type="button" class="removeCondition">x</button>
+        </div>
+        <div class="valuePicker hidden">
+          <div class="pickerMeta"></div>
+          <div class="pickerList"></div>
+        </div>
       </div>
     </template>
 

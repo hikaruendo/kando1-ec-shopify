@@ -3,9 +3,13 @@ const ruleTpl = document.getElementById('ruleTpl');
 const conditionTpl = document.getElementById('conditionTpl');
 const summaryEl = document.getElementById('summary');
 const resultEl = document.getElementById('result');
+const productIdEl = document.getElementById('productId');
+let valueCandidatesCache = null;
 
 function parseCsvValues(input) {
   return String(input ?? '')
+    .replaceAll('、', ',')
+    .replace(/\n/g, ',')
     .split(',')
     .map(v => v.trim())
     .filter(Boolean);
@@ -16,22 +20,139 @@ function serializeConditionValue(value) {
   return String(value ?? '');
 }
 
+function getProductId() {
+  return productIdEl.value.trim();
+}
+
+function indexCandidateValues(diffs) {
+  const values = {
+    option1: new Set(),
+    option2: new Set(),
+    title: new Set()
+  };
+  for (const row of diffs || []) {
+    values.option1.add(String(row.option1 ?? '').trim());
+    values.option2.add(String(row.option2 ?? '').trim());
+    values.title.add(String(row.title ?? '').trim());
+  }
+  return {
+    option1: [...values.option1].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja')),
+    option2: [...values.option2].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja')),
+    title: [...values.title].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja'))
+  };
+}
+
+async function ensureValueCandidates() {
+  const productId = getProductId();
+  if (!productId) throw new Error('productId required');
+  if (valueCandidatesCache?.productId === productId) return valueCandidatesCache;
+
+  const sim = await request('/api/simulate', []);
+  valueCandidatesCache = {
+    productId,
+    byField: indexCandidateValues(sim.diffs)
+  };
+  return valueCandidatesCache;
+}
+
 function syncConditionInput(conditionEl) {
   const op = conditionEl.querySelector('.op').value;
   const valueInput = conditionEl.querySelector('.value');
+  const pickBtn = conditionEl.querySelector('.pickValues');
+  const picker = conditionEl.querySelector('.valuePicker');
   if (op === 'in') {
     valueInput.placeholder = 'Black1, Black2, Black3';
+    pickBtn.classList.remove('hidden');
   } else {
     valueInput.placeholder = 'value';
+    pickBtn.classList.add('hidden');
+    picker.classList.add('hidden');
+  }
+}
+
+function closeAllPickers(exceptEl = null) {
+  for (const picker of document.querySelectorAll('.valuePicker')) {
+    if (picker !== exceptEl) picker.classList.add('hidden');
+  }
+}
+
+async function renderPickerValues(conditionEl) {
+  const field = conditionEl.querySelector('.field').value;
+  const valueInput = conditionEl.querySelector('.value');
+  const picker = conditionEl.querySelector('.valuePicker');
+  const meta = picker.querySelector('.pickerMeta');
+  const list = picker.querySelector('.pickerList');
+
+  meta.textContent = 'loading...';
+  list.replaceChildren();
+
+  const cache = await ensureValueCandidates();
+  const candidates = cache.byField[field] || [];
+  const selected = new Set(parseCsvValues(valueInput.value));
+
+  if (!candidates.length) {
+    meta.textContent = `No candidates found for ${field}`;
+    return;
+  }
+
+  meta.textContent = `${field} values (${candidates.length})`;
+  const frag = document.createDocumentFragment();
+  for (const candidate of candidates) {
+    const label = document.createElement('label');
+    label.className = 'pickerItem';
+
+    const cb = document.createElement('input');
+    cb.type = 'checkbox';
+    cb.value = candidate;
+    cb.checked = selected.has(candidate);
+    cb.onchange = () => {
+      if (cb.checked) selected.add(candidate);
+      else selected.delete(candidate);
+      valueInput.value = [...selected].join(', ');
+    };
+
+    const text = document.createElement('span');
+    text.textContent = candidate;
+
+    label.append(cb, text);
+    frag.appendChild(label);
+  }
+  list.appendChild(frag);
+}
+
+async function togglePicker(conditionEl) {
+  const picker = conditionEl.querySelector('.valuePicker');
+  if (!picker.classList.contains('hidden')) {
+    picker.classList.add('hidden');
+    return;
+  }
+
+  closeAllPickers(picker);
+  picker.classList.remove('hidden');
+  try {
+    await renderPickerValues(conditionEl);
+  } catch (e) {
+    picker.querySelector('.pickerMeta').textContent = `Failed to load candidates: ${String(e.message || e)}`;
+    picker.querySelector('.pickerList').replaceChildren();
   }
 }
 
 function addCondition(container, seed = {}) {
   const node = conditionTpl.content.firstElementChild.cloneNode(true);
+  const opSelect = node.querySelector('.op');
+  const fieldSelect = node.querySelector('.field');
+  const pickBtn = node.querySelector('.pickValues');
+
   node.querySelector('.field').value = seed.field ?? 'option1';
-  node.querySelector('.op').value = seed.op ?? 'startsWith';
+  opSelect.value = seed.op ?? 'startsWith';
   node.querySelector('.value').value = serializeConditionValue(seed.value);
-  node.querySelector('.op').onchange = () => syncConditionInput(node);
+  fieldSelect.onchange = async () => {
+    if (!node.querySelector('.valuePicker').classList.contains('hidden')) {
+      await renderPickerValues(node);
+    }
+  };
+  opSelect.onchange = () => syncConditionInput(node);
+  pickBtn.onclick = async () => togglePicker(node);
   node.querySelector('.removeCondition').onclick = () => node.remove();
   syncConditionInput(node);
   container.appendChild(node);
@@ -75,9 +196,9 @@ function collectRules() {
   }));
 }
 
-async function request(path) {
-  const productId = document.getElementById('productId').value.trim();
-  const body = { productId, rules: collectRules() };
+async function request(path, rules = collectRules()) {
+  const productId = getProductId();
+  const body = { productId, rules };
   const res = await fetch(path, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
@@ -108,6 +229,13 @@ function renderSim(data) {
 }
 
 document.getElementById('addRule').onclick = () => addRule();
+productIdEl.oninput = () => {
+  valueCandidatesCache = null;
+};
+document.addEventListener('click', event => {
+  if (!event.target.closest('.condition')) closeAllPickers();
+});
+
 document.getElementById('simulate').onclick = async () => {
   try {
     const data = await request('/api/simulate');
@@ -130,7 +258,7 @@ addRule({
   priority: 1,
   conditions: [
     { field: 'option1', op: 'in', value: ['Black1', 'Black2', 'Black3', 'Black4', 'Black5'] },
-    { field: 'option2', op: 'equals', value: 'Pro' }
+    { field: 'option2', op: 'equals', value: 'Standard' }
   ],
   action: { type: 'add', value: 300 }
 });

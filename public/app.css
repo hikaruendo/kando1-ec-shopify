@@ -11,6 +11,36 @@ button { cursor: pointer; }
 .between { justify-content: space-between; }
 .rule { border: 1px solid #e6e6e6; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #fafafa; }
 .conditions { margin-bottom: 8px; }
+.condition { margin: 8px 0; }
+.condition .row { margin: 0; }
+.hidden { display: none; }
+.pickValues { white-space: nowrap; }
+.valuePicker {
+  margin-top: 8px;
+  border: 1px solid #e2e2e2;
+  border-radius: 8px;
+  background: #fff;
+  padding: 8px;
+}
+.pickerMeta {
+  font-size: 12px;
+  color: #666;
+  margin-bottom: 6px;
+}
+.pickerList {
+  max-height: 180px;
+  overflow: auto;
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 4px 8px;
+}
+.pickerItem {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: #333;
+}
 .table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .table th, .table td { border-bottom: 1px solid #ececec; padding: 8px; text-align: left; }
 .changed { color: #b00020; font-weight: 600; }

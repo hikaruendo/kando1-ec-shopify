@@ -9,6 +9,7 @@ MVP-B: 大量バリアント向け価格一括更新アプリ（まずはAPI土�
 - `POST /api/jobs/:jobId/undo` 直前ジョブ復元
 - Rule Builder + Previewの最小UI（`GET /`）
 - 条件演算子 `in`（カンマ区切り複数値 / 配列）対応
+- `in` 条件で候補値をチェックボックス選択（option1/option2/title）
 
 > デフォルトは `MOCK_MODE=true` なので、Shopify接続なしで挙動確認できます。
 
