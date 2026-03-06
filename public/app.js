@@ -146,7 +146,11 @@ async function renderPickerValues(conditionEl) {
 
   const cache = await ensureValueCandidates();
   const candidates = cache.byField[field] || [];
-  const selected = new Set(parseCsvValues(valueInput.value));
+  const candidateSet = new Set(candidates);
+  const selected = new Set(
+    parseCsvValues(valueInput.value).filter(value => candidateSet.has(value))
+  );
+  valueInput.value = [...selected].join(', ');
 
   if (!candidates.length) {
     meta.textContent = `No candidates found for ${field}`;
