@@ -13,12 +13,14 @@
       <h1 data-i18n="appTitle">Bulk Pricing Rule Builder</h1>
 
       <section class="card">
-        <label data-i18n="shopDomainLabel">Shop Domain</label>
-        <div class="row">
-          <input id="shop" placeholder="example.myshopify.com" />
-          <button id="connectShop" type="button" data-i18n="connectButton">Connect</button>
+        <div id="shopSection" class="hidden">
+          <label data-i18n="shopDomainLabel">Shop Domain</label>
+          <div class="row">
+            <input id="shop" placeholder="example.myshopify.com" />
+            <button id="connectShop" type="button" data-i18n="connectButton">Connect</button>
+          </div>
+          <div id="shopStatus" class="hint"></div>
         </div>
-        <div id="shopStatus" class="hint"></div>
 
         <label data-i18n="productIdLabel">Product ID</label>
         <div class="row">

@@ -222,7 +222,7 @@ app.post('/api/apply', async (req, res) => {
 
     for (const row of changed) {
       try {
-        await updateVariantPrice(row.variantId, row.afterPrice, shopContext);
+        await updateVariantPrice(productId, row.variantId, row.afterPrice, shopContext);
         jobs.get(jobId).changedCount += 1;
       } catch (e) {
         jobs.get(jobId).errorCount += 1;
@@ -231,7 +231,13 @@ app.post('/api/apply', async (req, res) => {
     }
 
     jobs.get(jobId).status = 'completed';
-    return res.json({ jobId, status: 'completed', changedCount: jobs.get(jobId).changedCount, errorCount: jobs.get(jobId).errorCount });
+    return res.json({
+      jobId,
+      status: 'completed',
+      changedCount: jobs.get(jobId).changedCount,
+      errorCount: jobs.get(jobId).errorCount,
+      firstError: jobs.get(jobId).errors?.[0]?.message || null
+    });
   } catch (e) {
     return res.status(500).json({ error: String(e) });
   }
@@ -264,7 +270,7 @@ app.post('/api/jobs/:jobId/undo', async (req, res) => {
   const errors = [];
   for (const s of job.snapshots || []) {
     try {
-      await updateVariantPrice(s.variantId, s.beforePrice, shopContext);
+      await updateVariantPrice(job.productId, s.variantId, s.beforePrice, shopContext);
       restoredCount += 1;
     } catch (e) {
       errors.push({ variantId: s.variantId, message: String(e) });

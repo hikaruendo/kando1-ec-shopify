@@ -9,6 +9,7 @@ const pickProductBtn = document.getElementById('pickProduct');
 const shopEl = document.getElementById('shop');
 const shopStatusEl = document.getElementById('shopStatus');
 const connectShopBtn = document.getElementById('connectShop');
+const shopSectionEl = document.getElementById('shopSection');
 
 let valueCandidatesCache = null;
 
@@ -169,6 +170,12 @@ function applyStaticI18n() {
     if (!key) continue;
     el.setAttribute('placeholder', t(key));
   }
+}
+
+function shouldShowShopControls(shopFromQuery) {
+  const qs = new URLSearchParams(window.location.search);
+  const debug = qs.get('debug') === '1';
+  return debug || !shopFromQuery;
 }
 
 function normalizeShop(input) {
@@ -597,7 +604,8 @@ document.getElementById('simulate').onclick = async () => {
 document.getElementById('apply').onclick = async () => {
   try {
     const data = await request('/api/apply');
-    summaryEl.innerHTML = `<b>${t('applyDoneLabel')}</b>: jobId=${data.jobId}, changed=${data.changedCount}, errors=${data.errorCount}`;
+    const firstError = data.firstError ? `, firstError=${escapeHtml(data.firstError)}` : '';
+    summaryEl.innerHTML = `<b>${t('applyDoneLabel')}</b>: jobId=${data.jobId}, changed=${data.changedCount}, errors=${data.errorCount}${firstError}`;
   } catch (e) {
     renderRequestError(t('applyError'), e);
   }
@@ -611,8 +619,13 @@ addRule({
 
 (() => {
   const qs = new URLSearchParams(window.location.search);
-  const shop = normalizeShop(qs.get('shop'));
-  if (shop) shopEl.value = shop;
+  const shopFromQuery = normalizeShop(qs.get('shop'));
+  if (shopFromQuery) shopEl.value = shopFromQuery;
+  if (!shouldShowShopControls(shopFromQuery)) {
+    shopSectionEl.classList.add('hidden');
+  } else {
+    shopSectionEl.classList.remove('hidden');
+  }
   normalizeProductIdInput();
   if (getAppBridge()) {
     setProductInfo(t('resourcePickerAvailable'));
