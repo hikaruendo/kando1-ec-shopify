@@ -1,4 +1,8 @@
-body { font-family: Inter, system-ui, sans-serif; margin: 0; background: #f5f5f5; }
+*,
+*::before,
+*::after { box-sizing: border-box; }
+
+body { font-family: Inter, system-ui, sans-serif; margin: 0; background: #f5f5f5; overflow-x: hidden; }
 .wrap { max-width: 920px; margin: 24px auto; padding: 0 16px; }
 .card { background: #fff; border-radius: 12px; padding: 16px; margin-bottom: 12px; }
 h1 { margin: 0 0 12px; }
@@ -8,7 +12,8 @@ input, select, button { padding: 8px 10px; border-radius: 8px; border: 1px solid
 button { cursor: pointer; }
 .hint { font-size: 12px; color: #666; margin: 6px 0 12px; }
 .warn { background: #111; color: #fff; }
-.row { display: flex; gap: 8px; align-items: center; margin: 8px 0; }
+.row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
+.row > * { min-width: 0; }
 .between { justify-content: space-between; }
 .rule { border: 1px solid #e6e6e6; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #fafafa; }
 .conditions { margin-bottom: 8px; }
@@ -16,6 +21,13 @@ button { cursor: pointer; }
 .condition .row { margin: 0; }
 .hidden { display: none; }
 .pickValues { white-space: nowrap; }
+#shop,
+#productId { flex: 1 1 320px; min-width: 220px; }
+.condition .field { flex: 0 1 130px; }
+.condition .op { flex: 0 1 170px; }
+.condition .value { flex: 1 1 220px; min-width: 180px; }
+.condition .pickValues,
+.condition .removeCondition { flex: 0 0 auto; }
 .valuePicker {
   margin-top: 8px;
   border: 1px solid #e2e2e2;
@@ -45,3 +57,16 @@ button { cursor: pointer; }
 .table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .table th, .table td { border-bottom: 1px solid #ececec; padding: 8px; text-align: left; }
 .changed { color: #b00020; font-weight: 600; }
+#result { overflow-x: auto; }
+
+@media (max-width: 760px) {
+  .wrap { margin: 12px auto; padding: 0 10px; }
+  h1 { font-size: 32px; line-height: 1.2; }
+  .card { padding: 12px; }
+  #shop,
+  #productId { flex: 1 1 100%; min-width: 0; }
+  .condition .field,
+  .condition .op,
+  .condition .value { flex: 1 1 100%; min-width: 0; }
+  .pickerList { grid-template-columns: 1fr; }
+}

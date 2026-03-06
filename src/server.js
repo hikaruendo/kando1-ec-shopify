@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import path from 'node:path';
+import { readFile } from 'node:fs/promises';
 import { simulate } from './rules.js';
 import { fetchVariantsByProductId, updateVariantPrice } from './shopifyClient.js';
 import { jobs, nextJobId, shopSessions, saveShopSession, saveOauthState, consumeOauthState } from './store.js';
@@ -21,6 +22,7 @@ const port = Number(PORT);
 const appBaseUrl = APP_URL || `http://localhost:${port}`;
 const redirectUri = new URL('/auth/callback', appBaseUrl).toString();
 const mockMode = MOCK_MODE === 'true';
+let indexHtmlCache = null;
 
 function getShopFromRequest(req) {
   return (
@@ -65,6 +67,13 @@ function assertAuthConfig() {
   return 'SHOPIFY_API_KEY and SHOPIFY_API_SECRET are required when MOCK_MODE=false';
 }
 
+async function renderIndexHtml() {
+  if (!indexHtmlCache) {
+    indexHtmlCache = await readFile(path.resolve('public/index.html'), 'utf8');
+  }
+  return indexHtmlCache.replace('__SHOPIFY_API_KEY__', String(SHOPIFY_API_KEY || ''));
+}
+
 const app = express();
 app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => {
@@ -79,15 +88,20 @@ app.use(express.static('public', { index: false }));
 app.get('/health', (_req, res) => res.json({ ok: true, mockMode, appBaseUrl }));
 
 app.get('/', (req, res) => {
-  const authError = assertAuthConfig();
-  if (authError) return res.status(500).send(authError);
+  return (async () => {
+    const authError = assertAuthConfig();
+    if (authError) return res.status(500).send(authError);
 
-  const shop = normalizeShop(req.query.shop);
-  if (!mockMode && shop && !getSessionByShop(shop)) {
-    return res.redirect(`/auth?shop=${encodeURIComponent(shop)}`);
-  }
+    const shop = normalizeShop(req.query.shop);
+    if (!mockMode && shop && !getSessionByShop(shop)) {
+      return res.redirect(`/auth?shop=${encodeURIComponent(shop)}`);
+    }
 
-  return res.sendFile(path.resolve('public/index.html'));
+    const html = await renderIndexHtml();
+    return res.type('html').send(html);
+  })().catch(error => {
+    return res.status(500).send(String(error));
+  });
 });
 
 app.get('/auth', (req, res) => {
@@ -208,7 +222,7 @@ app.post('/api/apply', async (req, res) => {
 
     for (const row of changed) {
       try {
-        await updateVariantPrice(row.variantId, row.afterPrice, shopContext);
+        await updateVariantPrice(productId, row.variantId, row.afterPrice, shopContext);
         jobs.get(jobId).changedCount += 1;
       } catch (e) {
         jobs.get(jobId).errorCount += 1;
@@ -217,7 +231,13 @@ app.post('/api/apply', async (req, res) => {
     }
 
     jobs.get(jobId).status = 'completed';
-    return res.json({ jobId, status: 'completed', changedCount: jobs.get(jobId).changedCount, errorCount: jobs.get(jobId).errorCount });
+    return res.json({
+      jobId,
+      status: 'completed',
+      changedCount: jobs.get(jobId).changedCount,
+      errorCount: jobs.get(jobId).errorCount,
+      firstError: jobs.get(jobId).errors?.[0]?.message || null
+    });
   } catch (e) {
     return res.status(500).json({ error: String(e) });
   }
@@ -250,7 +270,7 @@ app.post('/api/jobs/:jobId/undo', async (req, res) => {
   const errors = [];
   for (const s of job.snapshots || []) {
     try {
-      await updateVariantPrice(s.variantId, s.beforePrice, shopContext);
+      await updateVariantPrice(job.productId, s.variantId, s.beforePrice, shopContext);
       restoredCount += 1;
     } catch (e) {
       errors.push({ variantId: s.variantId, message: String(e) });

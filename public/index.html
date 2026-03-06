@@ -1,36 +1,44 @@
 <!doctype html>
-<html lang="ja">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="shopify-api-key" content="__SHOPIFY_API_KEY__" />
     <title>kando1 Bulk Pricing MVP</title>
     <link rel="stylesheet" href="/app.css" />
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
   </head>
   <body>
     <main class="wrap">
-      <h1>Bulk Pricing Rule Builder (MVP)</h1>
+      <h1 data-i18n="appTitle">Bulk Pricing Rule Builder</h1>
 
       <section class="card">
-        <label>Shop Domain</label>
-        <div class="row">
-          <input id="shop" placeholder="example.myshopify.com" />
-          <button id="connectShop" type="button">Connect</button>
+        <div id="shopSection" class="hidden">
+          <label data-i18n="shopDomainLabel">Shop Domain</label>
+          <div class="row">
+            <input id="shop" placeholder="example.myshopify.com" />
+            <button id="connectShop" type="button" data-i18n="connectButton">Connect</button>
+          </div>
+          <div id="shopStatus" class="hint"></div>
         </div>
-        <div id="shopStatus" class="hint"></div>
 
-        <label>Product ID</label>
-        <input id="productId" value="gid://shopify/Product/123" />
+        <label data-i18n="productIdLabel">Product ID</label>
+        <div class="row">
+          <input id="productId" data-i18n-placeholder="productIdPlaceholder" placeholder="Pick product or paste gid://shopify/Product/123" />
+          <button id="pickProduct" type="button" data-i18n="pickProductButton">Pick product</button>
+        </div>
+        <div id="productInfo" class="hint"></div>
 
         <div class="row between">
-          <h2>Rules</h2>
-          <button id="addRule" type="button">+ Rule</button>
+          <h2 data-i18n="rulesHeading">Rules</h2>
+          <button id="addRule" type="button" data-i18n="addRuleButton">+ Rule</button>
         </div>
 
         <div id="rules"></div>
 
         <div class="row">
-          <button id="simulate" type="button">Preview</button>
-          <button id="apply" type="button" class="warn">Apply</button>
+          <button id="simulate" type="button" data-i18n="previewButton">Preview</button>
+          <button id="apply" type="button" class="warn" data-i18n="applyButton">Apply</button>
         </div>
       </section>
 
