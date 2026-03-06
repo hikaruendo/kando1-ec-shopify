@@ -12,6 +12,7 @@ MVP-B: 大量バリアント向け価格一括更新アプリ（まずはAPI土�
 - `in` 条件で候補値をチェックボックス選択（option1/option2/title）
 - Shopify OAuth（`/auth` → `/auth/callback`）の最小導線
 - shop単位のアクセストークン管理（メモリ）
+- App Bridge Resource Picker で商品選択（手動Product ID入力を補助）
 
 > デフォルトは `MOCK_MODE=true` なので、Shopify接続なしで挙動確認できます。
 

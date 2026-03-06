@@ -4,12 +4,15 @@ const conditionTpl = document.getElementById('conditionTpl');
 const summaryEl = document.getElementById('summary');
 const resultEl = document.getElementById('result');
 const productIdEl = document.getElementById('productId');
+const productInfoEl = document.getElementById('productInfo');
+const pickProductBtn = document.getElementById('pickProduct');
 const shopEl = document.getElementById('shop');
 const shopStatusEl = document.getElementById('shopStatus');
 const connectShopBtn = document.getElementById('connectShop');
 let valueCandidatesCache = null;
 
 const SHOP_RE = /^[a-z0-9][a-z0-9-]*\.myshopify\.com$/i;
+const ADMIN_PRODUCT_URL_RE = /\/products\/(\d+)/i;
 
 function normalizeShop(input) {
   const shop = String(input || '').trim().toLowerCase();
@@ -40,11 +43,63 @@ function serializeConditionValue(value) {
 }
 
 function getProductId() {
-  return productIdEl.value.trim();
+  const raw = productIdEl.value.trim();
+  const fromUrl = raw.match(ADMIN_PRODUCT_URL_RE)?.[1];
+  if (fromUrl) return `gid://shopify/Product/${fromUrl}`;
+  return raw;
 }
 
 function getShop() {
   return normalizeShop(shopEl.value);
+}
+
+function setProductInfo(text) {
+  productInfoEl.textContent = text || '';
+}
+
+function normalizeProductIdInput() {
+  const normalized = getProductId();
+  if (!normalized) return;
+  if (normalized !== productIdEl.value.trim()) {
+    productIdEl.value = normalized;
+  }
+}
+
+function getAppBridge() {
+  if (!window.shopify || typeof window.shopify.resourcePicker !== 'function') return null;
+  return window.shopify;
+}
+
+function extractPickedProduct(selectionResult) {
+  if (Array.isArray(selectionResult)) return selectionResult[0] || null;
+  if (Array.isArray(selectionResult?.selection)) return selectionResult.selection[0] || null;
+  if (selectionResult?.id) return selectionResult;
+  return null;
+}
+
+async function pickProductWithAppBridge() {
+  const bridge = getAppBridge();
+  if (!bridge) {
+    setProductInfo('Resource Picker unavailable. Open from Shopify Admin embedded app.');
+    return;
+  }
+
+  try {
+    const selected = await bridge.resourcePicker({
+      type: 'product',
+      action: 'select',
+      multiple: false
+    });
+    const picked = extractPickedProduct(selected);
+    if (!picked?.id) return;
+
+    productIdEl.value = picked.id;
+    valueCandidatesCache = null;
+    const title = picked.title ? `Selected: ${picked.title}` : 'Selected product set';
+    setProductInfo(title);
+  } catch (e) {
+    setProductInfo(`Product picker failed: ${String(e.message || e)}`);
+  }
 }
 
 function getAuthUrl(shop) {
@@ -304,6 +359,12 @@ document.getElementById('addRule').onclick = () => addRule();
 productIdEl.oninput = () => {
   valueCandidatesCache = null;
 };
+productIdEl.onblur = () => {
+  normalizeProductIdInput();
+};
+pickProductBtn.onclick = async () => {
+  await pickProductWithAppBridge();
+};
 shopEl.oninput = () => {
   valueCandidatesCache = null;
   refreshShopStatus();
@@ -351,6 +412,12 @@ addRule({
   const qs = new URLSearchParams(window.location.search);
   const shop = normalizeShop(qs.get('shop'));
   if (shop) shopEl.value = shop;
+  normalizeProductIdInput();
+  if (getAppBridge()) {
+    setProductInfo('Resource Picker available');
+  } else {
+    setProductInfo('Paste Product GID or admin product URL, or open in embedded app for picker');
+  }
   if (qs.get('installed') === '1') {
     summaryEl.innerHTML = '<b>shop connected</b>: OAuth completed';
   }

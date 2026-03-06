@@ -3,8 +3,10 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="shopify-api-key" content="__SHOPIFY_API_KEY__" />
     <title>kando1 Bulk Pricing MVP</title>
     <link rel="stylesheet" href="/app.css" />
+    <script src="https://cdn.shopify.com/shopifycloud/app-bridge.js"></script>
   </head>
   <body>
     <main class="wrap">
@@ -19,7 +21,11 @@
         <div id="shopStatus" class="hint"></div>
 
         <label>Product ID</label>
-        <input id="productId" value="gid://shopify/Product/123" />
+        <div class="row">
+          <input id="productId" value="gid://shopify/Product/123" />
+          <button id="pickProduct" type="button">Pick product</button>
+        </div>
+        <div id="productInfo" class="hint"></div>
 
         <div class="row between">
           <h2>Rules</h2>
