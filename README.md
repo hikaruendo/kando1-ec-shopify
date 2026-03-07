@@ -74,6 +74,9 @@ npm run dev
 - Dev Dashboard の Distribution を本番方針に合わせて設定
 - App Store公開する場合は listing（説明、画像、価格、サポート、プライバシー）を整備
 - 言語は実装済みのみ掲載（本プロジェクトは `ja/en` 自動切替対応）
+- 公開URLの例:
+  - Privacy policy: `https://kando1-bulk-pricing.fly.dev/privacy.html`
+  - Support: `https://kando1-bulk-pricing.fly.dev/support.html`
 
 6. 最終チェック
 - 権限スコープ最小化
@@ -99,3 +102,77 @@ curl -X POST http://localhost:8787/api/simulate \
     ]
   }'
 ```
+
+## App Listing 下書き
+
+Shopify の App Store requirements では、埋め込みアプリは session token を使うこと、課金がある場合は Shopify Billing API か Managed Pricing を使うこと、listing は正確であることが求められる。
+参照:
+- [App Store requirements](https://shopify.dev/docs/apps/launch/shopify-app-store/app-store-requirements)
+- [Submit your app for review](https://shopify.dev/docs/apps/launch/app-store-review/submit-app-for-review)
+
+### 基本情報
+- App name:
+  - `Bulk Pricing Rule Builder`
+- Primary language:
+  - `English`
+- Additional language:
+  - `Japanese`
+- Sales channel requirement:
+  - `No online store required`
+- Public URLs:
+  - Privacy policy: `https://kando1-bulk-pricing.fly.dev/privacy.html`
+  - Support: `https://kando1-bulk-pricing.fly.dev/support.html`
+
+### 英語 listing 文案
+- One-line summary:
+  - `Bulk update variant prices by combining multiple option values in a single rule.`
+- Short description:
+  - `Preview and apply bulk price changes for variants filtered by multiple option values such as color groups and grades.`
+- Full description:
+  - `Bulk Pricing Rule Builder helps merchants update variant prices faster when products have many option combinations.`
+  - `Instead of editing each SKU one by one, merchants can define rules such as "Option 1 is any of Black1 to Black5" and "Option 2 equals Standard", preview the affected variants, and then apply the update in one action.`
+  - `The app is designed for products with large variant matrices where Shopify's native bulk editing flow is too slow for repeated price operations.`
+- Key benefits:
+  - `Filter variants by multiple option values in one rule`
+  - `Preview every affected variant before applying changes`
+  - `Update only changed variants`
+  - `Undo the most recent pricing job`
+- Suggested feature bullets:
+  - `Multi-value filtering for option1, option2, and title`
+  - `Add, set, or multiply prices`
+  - `Embedded admin experience with product picker`
+  - `Japanese and English UI support`
+
+### 日本語 listing 文案
+- One-line summary:
+  - `複数のバリアント条件を組み合わせて、価格を一括更新できるアプリ`
+- Short description:
+  - `色グループやグレードなど複数のオプション値でバリアントを絞り込み、価格変更をプレビューして一括反映できます。`
+- Full description:
+  - `Bulk Pricing Rule Builder は、バリアント数が多い商品の価格更新を効率化するためのアプリです。`
+  - `SKU を1件ずつ手作業で編集する代わりに、たとえば「Option 1 が Black1 から Black5 のいずれか」「Option 2 が Standard」といった条件を作成し、対象バリアントをプレビューしたうえで一括反映できます。`
+  - `Shopify 標準の一括編集では扱いづらい、複数条件を組み合わせた価格更新に向いています。`
+- Key benefits:
+  - `複数のオプション値を 1 つのルールで指定可能`
+  - `反映前に対象バリアントを一覧で確認可能`
+  - `変更が必要なバリアントだけを更新`
+  - `直前の価格更新ジョブを取り消し可能`
+
+### カテゴリ候補
+- Primary category:
+  - `Store management`
+- Secondary category:
+  - `Selling products`
+
+### Review 用テスト情報の下書き
+- Review store:
+  - `bulk-update-products.myshopify.com`
+- Core flow:
+  - `Open the app from Shopify Admin > Apps`
+  - `Pick a product with variants`
+  - `Create a rule using in (multi-select) for Option 1 and Option 2`
+  - `Click Preview and confirm changed variants`
+  - `Click Apply and confirm errors=0`
+- Notes for reviewer:
+  - `The app is embedded and should be opened from Shopify Admin.`
+  - `Billing is not implemented yet in this branch and should not be described in the listing.`
