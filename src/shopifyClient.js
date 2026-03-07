@@ -63,20 +63,24 @@ export async function fetchVariantsByProductId(productId, context = {}) {
   }));
 }
 
-export async function updateVariantPrice(variantId, price, context = {}) {
+export async function updateVariantPrice(productId, variantId, price, context = {}) {
   if (mockMode) return { ok: true, mock: true };
 
   const mutation = `
-    mutation UpdateVariant($input: ProductVariantInput!) {
-      productVariantUpdate(input: $input) {
-        productVariant { id price }
+    mutation UpdateVariantPrice($productId: ID!, $variants: [ProductVariantsBulkInput!]!) {
+      productVariantsBulkUpdate(productId: $productId, variants: $variants) {
+        productVariants { id price }
         userErrors { field message }
       }
     }
   `;
 
-  const data = await gql(mutation, { input: { id: variantId, price: String(price) } }, context);
-  const errs = data?.productVariantUpdate?.userErrors || [];
+  const data = await gql(
+    mutation,
+    { productId, variants: [{ id: variantId, price: String(price) }] },
+    context
+  );
+  const errs = data?.productVariantsBulkUpdate?.userErrors || [];
   if (errs.length) throw new Error(JSON.stringify(errs));
   return { ok: true };
 }
