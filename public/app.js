@@ -229,9 +229,29 @@ function normalizeProductIdInput() {
   }
 }
 
-function getAppBridge() {
-  if (!window.shopify || typeof window.shopify.resourcePicker !== 'function') return null;
-  return window.shopify;
+function getShopifyGlobal() {
+  return window.shopify || null;
+}
+
+function getResourcePickerBridge() {
+  const shopify = getShopifyGlobal();
+  if (!shopify || typeof shopify.resourcePicker !== 'function') return null;
+  return shopify;
+}
+
+async function getSessionToken() {
+  const shopify = getShopifyGlobal();
+  if (!shopify || typeof shopify.idToken !== 'function') return '';
+  return shopify.idToken();
+}
+
+async function buildApiHeaders() {
+  const headers = { 'content-type': 'application/json' };
+  const sessionToken = await getSessionToken();
+  if (sessionToken) {
+    headers.authorization = `Bearer ${sessionToken}`;
+  }
+  return headers;
 }
 
 function extractPickedProduct(selectionResult) {
@@ -242,7 +262,7 @@ function extractPickedProduct(selectionResult) {
 }
 
 async function pickProductWithAppBridge() {
-  const bridge = getAppBridge();
+  const bridge = getResourcePickerBridge();
   if (!bridge) {
     setProductInfo(t('resourcePickerUnavailable'));
     return;
@@ -296,7 +316,9 @@ async function refreshShopStatus() {
   }
 
   try {
-    const res = await fetch(`/api/auth/status?shop=${encodeURIComponent(shop)}`);
+    const res = await fetch(`/api/auth/status?shop=${encodeURIComponent(shop)}`, {
+      headers: await buildApiHeaders()
+    });
     const data = await res.json();
     if (!res.ok) throw new Error(data?.error || 'status check failed');
     if (data.connected) {
@@ -531,7 +553,7 @@ async function request(path, rules = collectRules()) {
   const body = { productId, shop, rules };
   const res = await fetch(path, {
     method: 'POST',
-    headers: { 'content-type': 'application/json' },
+    headers: await buildApiHeaders(),
     body: JSON.stringify(body)
   });
   let payload;
@@ -627,7 +649,7 @@ addRule({
     shopSectionEl.classList.remove('hidden');
   }
   normalizeProductIdInput();
-  if (getAppBridge()) {
+  if (getResourcePickerBridge()) {
     setProductInfo(t('resourcePickerAvailable'));
   } else {
     setProductInfo(t('pasteOrOpenForPicker'));

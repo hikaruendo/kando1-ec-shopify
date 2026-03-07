@@ -5,7 +5,15 @@ import { readFile } from 'node:fs/promises';
 import { simulate } from './rules.js';
 import { fetchVariantsByProductId, updateVariantPrice } from './shopifyClient.js';
 import { jobs, nextJobId, shopSessions, saveShopSession, saveOauthState, consumeOauthState } from './store.js';
-import { buildInstallUrl, normalizeShop, randomState, verifyHmac } from './shopifyAuth.js';
+import {
+  buildInstallUrl,
+  getBearerToken,
+  normalizeShop,
+  randomState,
+  verifyHmac,
+  verifySessionToken,
+  verifyWebhookHmac
+} from './shopifyAuth.js';
 
 const {
   PORT = 8787,
@@ -41,11 +49,68 @@ function getSessionByShop(shop) {
 
   const session = shopSessions.get(shop);
   if (!session?.accessToken) return null;
-  return { accessToken: session.accessToken, source: 'oauth' };
+  return { accessToken: session.accessToken, source: session.source || 'oauth' };
 }
 
-function resolveShopContext(req) {
+async function exchangeSessionTokenForOfflineAccessToken(shop, sessionToken) {
+  const body = new URLSearchParams({
+    client_id: String(SHOPIFY_API_KEY || ''),
+    client_secret: String(SHOPIFY_API_SECRET || ''),
+    grant_type: 'urn:ietf:params:oauth:grant-type:token-exchange',
+    subject_token: sessionToken,
+    subject_token_type: 'urn:ietf:params:oauth:token-type:id_token',
+    requested_token_type: 'urn:shopify:params:oauth:token-type:offline-access-token'
+  });
+
+  const tokenRes = await fetch(`https://${shop}/admin/oauth/access_token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      Accept: 'application/json'
+    },
+    body
+  });
+  const tokenBody = await tokenRes.json();
+  if (!tokenRes.ok || !tokenBody.access_token) {
+    throw new Error(`token exchange failed: ${JSON.stringify(tokenBody)}`);
+  }
+
+  saveShopSession(shop, {
+    shop,
+    accessToken: tokenBody.access_token,
+    scope: tokenBody.scope || SHOPIFY_SCOPES,
+    source: 'token-exchange-offline'
+  });
+  return getSessionByShop(shop);
+}
+
+function resolveEmbeddedSession(req) {
+  const sessionToken = getBearerToken(req.get('authorization'));
+  if (!sessionToken) return null;
+  const verified = verifySessionToken(sessionToken, {
+    apiKey: SHOPIFY_API_KEY,
+    apiSecret: SHOPIFY_API_SECRET
+  });
+  return { ...verified, sessionToken };
+}
+
+async function resolveShopContext(req) {
   if (mockMode) return {};
+
+  try {
+    const embeddedSession = resolveEmbeddedSession(req);
+    if (embeddedSession?.shop) {
+      const session = getSessionByShop(embeddedSession.shop)
+        || await exchangeSessionTokenForOfflineAccessToken(embeddedSession.shop, embeddedSession.sessionToken);
+      return {
+        shop: embeddedSession.shop,
+        accessToken: session.accessToken,
+        source: session.source || 'session-token'
+      };
+    }
+  } catch (error) {
+    return { error: { status: 401, body: { error: String(error.message || error) } } };
+  }
 
   const fallbackShop = normalizeShop(SHOPIFY_SHOP_DOMAIN);
   const shop = normalizeShop(getShopFromRequest(req) || fallbackShop);
@@ -75,6 +140,31 @@ async function renderIndexHtml() {
 }
 
 const app = express();
+app.post('/webhooks', express.raw({ type: '*/*' }), (req, res) => {
+  const authError = assertAuthConfig();
+  if (authError) return res.status(500).json({ error: authError });
+
+  if (!verifyWebhookHmac(req.body, req.get('x-shopify-hmac-sha256'), SHOPIFY_API_SECRET)) {
+    return res.status(401).send('Invalid webhook signature');
+  }
+
+  const topic = String(req.get('x-shopify-topic') || '');
+  const shop = normalizeShop(req.get('x-shopify-shop-domain')) || '';
+  let payload = {};
+
+  try {
+    payload = JSON.parse(Buffer.from(req.body).toString('utf8'));
+  } catch {
+    return res.status(400).send('Invalid webhook payload');
+  }
+
+  if (topic === 'app/uninstalled' && shop) {
+    shopSessions.delete(shop);
+  }
+
+  console.log('[webhook]', JSON.stringify({ topic, shop, payload }));
+  return res.status(200).json({ ok: true });
+});
 app.use(express.json({ limit: '1mb' }));
 app.use((req, res, next) => {
   const shop = normalizeShop(getShopFromRequest(req));
@@ -91,11 +181,6 @@ app.get('/', (req, res) => {
   return (async () => {
     const authError = assertAuthConfig();
     if (authError) return res.status(500).send(authError);
-
-    const shop = normalizeShop(req.query.shop);
-    if (!mockMode && shop && !getSessionByShop(shop)) {
-      return res.redirect(`/auth?shop=${encodeURIComponent(shop)}`);
-    }
 
     const html = await renderIndexHtml();
     return res.type('html').send(html);
@@ -174,18 +259,31 @@ app.get('/auth/callback', async (req, res) => {
   }
 });
 
-app.get('/api/auth/status', (req, res) => {
-  const shop = normalizeShop(req.query.shop);
-  if (!shop) return res.status(400).json({ error: 'shop required' });
-  const session = getSessionByShop(shop);
-  return res.json({ shop, connected: Boolean(session?.accessToken), source: session?.source || null });
+app.get('/api/auth/status', async (req, res) => {
+  try {
+    const embeddedContext = await resolveShopContext(req);
+    if (!embeddedContext.error) {
+      return res.json({
+        shop: embeddedContext.shop,
+        connected: true,
+        source: embeddedContext.source || 'session-token'
+      });
+    }
+
+    const shop = normalizeShop(req.query.shop);
+    if (!shop) return res.status(400).json({ error: 'shop required' });
+    const session = getSessionByShop(shop);
+    return res.json({ shop, connected: Boolean(session?.accessToken), source: session?.source || null });
+  } catch (e) {
+    return res.status(500).json({ error: String(e) });
+  }
 });
 
 app.post('/api/simulate', async (req, res) => {
   try {
     const { productId, rules = [] } = req.body || {};
     if (!productId) return res.status(400).json({ error: 'productId required' });
-    const shopContext = resolveShopContext(req);
+    const shopContext = await resolveShopContext(req);
     if (shopContext.error) return res.status(shopContext.error.status).json(shopContext.error.body);
 
     const variants = await fetchVariantsByProductId(productId, shopContext);
@@ -201,7 +299,7 @@ app.post('/api/apply', async (req, res) => {
     const { productId, rules = [] } = req.body || {};
     if (!productId) return res.status(400).json({ error: 'productId required' });
 
-    const shopContext = resolveShopContext(req);
+    const shopContext = await resolveShopContext(req);
     if (shopContext.error) return res.status(shopContext.error.status).json(shopContext.error.body);
 
     const variants = await fetchVariantsByProductId(productId, shopContext);
