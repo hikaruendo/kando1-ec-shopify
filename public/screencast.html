@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Kando1 Variant Bulk Editor Screencast</title>
+    <style>
+      :root {
+        color-scheme: light;
+        --bg: #f3f4f6;
+        --panel: #ffffff;
+        --text: #111827;
+        --muted: #4b5563;
+        --border: #d1d5db;
+      }
+      * {
+        box-sizing: border-box;
+      }
+      body {
+        margin: 0;
+        font-family: Arial, sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+      main {
+        max-width: 1100px;
+        margin: 0 auto;
+        padding: 48px 24px 72px;
+      }
+      .panel {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 20px;
+        padding: 28px;
+      }
+      h1 {
+        margin: 0 0 12px;
+        font-size: 40px;
+        line-height: 1.1;
+      }
+      p {
+        margin: 0 0 16px;
+        color: var(--muted);
+        font-size: 18px;
+        line-height: 1.6;
+      }
+      video {
+        display: block;
+        width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 16px;
+        background: #000;
+      }
+      .actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin: 20px 0 0;
+      }
+      .button {
+        display: inline-block;
+        padding: 14px 18px;
+        border-radius: 12px;
+        background: #111827;
+        color: #fff;
+        text-decoration: none;
+        font-weight: 700;
+      }
+      .button.secondary {
+        background: #fff;
+        color: #111827;
+        border: 1px solid var(--border);
+      }
+      .meta {
+        margin-top: 20px;
+        font-size: 15px;
+        color: var(--muted);
+      }
+      @media (max-width: 768px) {
+        main {
+          padding: 24px 16px 40px;
+        }
+        .panel {
+          padding: 20px;
+        }
+        h1 {
+          font-size: 30px;
+        }
+        p {
+          font-size: 16px;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <section class="panel">
+        <h1>Kando1 Variant Bulk Editor Screencast</h1>
+        <p>
+          This screencast shows the main merchant flow in the Shopify admin,
+          including product selection, rule setup, preview, apply, and result
+          confirmation.
+        </p>
+        <video controls preload="metadata">
+          <source src="/screencast.mp4" type="video/mp4" />
+          Your browser does not support embedded video playback.
+        </video>
+        <div class="actions">
+          <a class="button" href="/screencast.mp4">Open screencast file</a>
+          <a class="button secondary" href="/screencast.mp4" download>
+            Download MP4
+          </a>
+        </div>
+        <p class="meta">
+          Review video for Shopify App Store submission. The MP4 file is the
+          primary playback format for reliable browser playback.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

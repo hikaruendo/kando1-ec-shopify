@@ -1,3 +1,8 @@
 node_modules/
 .env
 shopify.app.toml
+.DS_Store
+.claude/
+assets/
+outputs/
+Detail.md
