@@ -176,3 +176,51 @@ Shopify の App Store requirements では、埋め込みアプリは session tok
 - Notes for reviewer:
   - `The app is embedded and should be opened from Shopify Admin.`
   - `Billing is not implemented yet in this branch and should not be described in the listing.`
+
+## 2026-03-15 時点の差分
+
+前回の README は「公開準備中」の内容までをまとめていたが、2026-03-15 時点では App Store review を提出済みで、現在は reviewer assignment 待ちの状態。
+
+### 現在の審査状態
+- Shopify Partner の `App Store review` で `Submitted`
+- ステータス表示:
+  - `We're assigning a reviewer to your submission`
+- review requirement の表示カテゴリ:
+  - `Functionality`
+  - `App Store listing`
+  - `Embedded`
+- Listing 言語:
+  - `English` を primary として提出
+- App Store visibility:
+  - 公開後もしばらくは `direct URL only`（fully visible 未実施）
+
+### 公開準備で追加したもの
+- Fly 本番 URL で運用:
+  - `https://kando1-bulk-pricing.fly.dev`
+- App Store listing 用の静的ページ:
+  - Privacy policy: `https://kando1-bulk-pricing.fly.dev/privacy.html`
+  - Support: `https://kando1-bulk-pricing.fly.dev/support.html`
+- Screencast URL 用ファイル:
+  - `https://kando1-bulk-pricing.fly.dev/screencast.mp4`
+  - 補助ページ: `https://kando1-bulk-pricing.fly.dev/screencast.html`
+- review 用補助デモ:
+  - `https://kando1-bulk-pricing.fly.dev/review-demo.html`
+
+### listing 下書きからの確定差分
+- App name の最終候補は generic name を避けて `Kando1 Variant Bulk Editor` を採用
+- pricing / price という単語は App name や App details から外し、pricing section 以外では使わない方針に変更
+- Pricing details は billing 未実装のため `Free` plan 1本で提出
+- Protected customer data は `My app won't use customer data` で申請
+- Capabilities は `Embedded` のみを選択
+- Category は実態に合わせて `Store management > Operations > Bulk editor` で入力
+
+### 審査提出時の運用メモ
+- `Checking app listing...` は Shopify 側でエラーになる場合があるが、submit 自体は可能
+- `Screencast URL` は HTML ページではなく動画直URLの方が安定
+- `missing or invalid: authenticity_token` は入力値ではなく Shopify 側編集セッション切れで発生する
+- フォーム保存エラー時は、まず入力値ではなく GraphQL response 本文を確認する
+
+### 現時点での未対応項目
+- Billing 実装は未着手（別 PR で対応予定）
+- App Store fully visible 化は未実施
+- 日本語 listing は primary ではなく、必要なら追加 translation として後続対応
