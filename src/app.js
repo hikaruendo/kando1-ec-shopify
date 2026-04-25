@@ -6,6 +6,7 @@ import { simulate } from './rules.js';
 import { fetchVariantsByProductId, updateVariantPrice } from './shopifyClient.js';
 import { consumeOauthState, nextJobId, saveOauthState } from './store.js';
 import { createAnalytics } from './analytics.js';
+import { getCurrentPlan } from './billing.js';
 import { deleteCriticalEventsByShop } from './db/events-repo.js';
 import { deleteJobsByShop, createJob, completeJob, getJobWithSnapshots, incrementJobProgress } from './db/jobs-repo.js';
 import { initializeDb } from './db/index.js';
@@ -216,6 +217,21 @@ export async function createApp({ logger = console, sqlitePath, analytics = null
     return { job, shopContext };
   }
 
+  async function attachBillingContext(req, res, next) {
+    try {
+      const shopContext = await resolveShopContext(req);
+      if (shopContext.error) return res.status(shopContext.error.status).json(shopContext.error.body);
+      req.shopContext = shopContext;
+      req.currentPlan = await getCurrentPlan(shopContext.shop || getShopFromRequest(req), {
+        accessToken: shopContext.accessToken,
+        logger
+      });
+      return next();
+    } catch (error) {
+      return res.status(500).json({ error: String(error) });
+    }
+  }
+
   const app = express();
 
   app.post('/webhooks', express.raw({ type: '*/*' }), (req, res) => {
@@ -399,14 +415,13 @@ export async function createApp({ logger = console, sqlitePath, analytics = null
     }
   });
 
-  app.post('/api/apply', async (req, res) => {
+  app.post('/api/apply', attachBillingContext, async (req, res) => {
     let jobId = null;
     try {
       const { productId, rules = [] } = req.body || {};
       if (!productId) return res.status(400).json({ error: 'productId required' });
 
-      const shopContext = await resolveShopContext(req);
-      if (shopContext.error) return res.status(shopContext.error.status).json(shopContext.error.body);
+      const shopContext = req.shopContext;
 
       const variants = await fetchVariantsByProductId(productId, shopContext);
       const sim = simulate(variants, rules);

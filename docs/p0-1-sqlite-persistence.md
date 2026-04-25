@@ -123,9 +123,9 @@ After merging PR `#4`, deploy with the Fly Volume in place and smoke test:
 - `POST /api/apply`
 - `GET /api/jobs/:jobId`
 - `POST /api/jobs/:jobId/undo`
-- invalid webhook HMAC returns `401`ああ
+- invalid webhook HMAC returns `401`
 
-P0-2 should follow the ADR adjustment: send broad analytics to GA4 and persist only billing-critical events in SQLite.
+P0-2 follows the ADR adjustment: send broad analytics to GA4 and persist only billing-critical events in SQLite.
 
 ## P0-2 Analytics Events Update
 
