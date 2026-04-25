@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import request from 'supertest';
 import { closeAllDbs } from '../src/db/index.js';
+import { listCriticalEvents, recordCriticalEvent } from '../src/db/events-repo.js';
 import { createJob, getJobWithSnapshots } from '../src/db/jobs-repo.js';
 import { getShopSession, saveShopSession } from '../src/db/sessions-repo.js';
 import { createTempDb, loadCreateApp, signWebhookPayload } from './helpers.js';
@@ -34,6 +35,25 @@ test('apply -> restart -> get/undo preserves API shape and shop isolation', asyn
       errorCount: 0,
       firstError: null
     });
+    assert.deepStrictEqual(listCriticalEvents({
+      shop: 'alpha-shop.myshopify.com',
+      name: 'apply_succeeded'
+    }).map(event => ({
+      shop: event.shop,
+      name: event.name,
+      payload: event.payload
+    })), [
+      {
+        shop: 'alpha-shop.myshopify.com',
+        name: 'apply_succeeded',
+        payload: {
+          jobId: 'job_000001',
+          changed_count: 3,
+          error_count: 0,
+          affected_variants: 3
+        }
+      }
+    ]);
 
     const expectedJob = {
       id: 'job_000001',
@@ -80,6 +100,10 @@ test('apply -> restart -> get/undo preserves API shape and shop isolation', asyn
       errorCount: 0,
       errors: []
     });
+    assert.equal(listCriticalEvents({
+      shop: 'alpha-shop.myshopify.com',
+      name: 'undo_succeeded'
+    }).length, 1);
   } finally {
     await db.cleanup();
   }
@@ -108,6 +132,12 @@ test('webhooks reject invalid signatures and clean up persisted shop data withou
       productId: 'gid://shopify/Product/123',
       snapshots: [{ variantId: 'v2', beforePrice: 1300, afterPrice: 1400 }]
     });
+    recordCriticalEvent({
+      id: 'event-1',
+      shop: 'alpha-shop.myshopify.com',
+      name: 'apply_succeeded',
+      payload: { jobId: 'job_000001' }
+    });
 
     const invalid = await request(app)
       .post('/webhooks')
@@ -133,6 +163,7 @@ test('webhooks reject invalid signatures and clean up persisted shop data withou
     assert.equal(redact.status, 200);
     assert.equal(getShopSession('alpha-shop.myshopify.com'), null);
     assert.equal(getJobWithSnapshots('job_000001'), null);
+    assert.deepStrictEqual(listCriticalEvents({ shop: 'alpha-shop.myshopify.com' }), []);
     assert.equal(logs.some(entry => entry.includes('customer@example.com')), false);
 
     saveShopSession('beta-shop.myshopify.com', {
@@ -161,6 +192,49 @@ test('webhooks reject invalid signatures and clean up persisted shop data withou
     assert.equal(uninstall.status, 200);
     assert.equal(getShopSession('beta-shop.myshopify.com'), null);
     assert.equal(getJobWithSnapshots('job_000002'), null);
+  } finally {
+    await db.cleanup();
+  }
+});
+
+test('paywall event endpoint persists only whitelisted billing events', async () => {
+  const db = await createTempDb();
+  try {
+    const createApp = await loadCreateApp();
+    const app = await createApp({ sqlitePath: db.sqlitePath });
+
+    const unsupported = await request(app)
+      .post('/api/events')
+      .send({
+        shop: 'alpha-shop.myshopify.com',
+        name: 'simulate_run',
+        payload: { affected_variants: 4 }
+      });
+    assert.equal(unsupported.status, 400);
+
+    const shown = await request(app)
+      .post('/api/events')
+      .send({
+        shop: 'alpha-shop.myshopify.com',
+        name: 'paywall_shown',
+        payload: { paywall_kind: 'variants_over_cap' }
+      });
+    assert.equal(shown.status, 200);
+    assert.deepStrictEqual(shown.body, { ok: true });
+    assert.deepStrictEqual(listCriticalEvents({
+      shop: 'alpha-shop.myshopify.com',
+      name: 'paywall_shown'
+    }).map(event => ({
+      shop: event.shop,
+      name: event.name,
+      payload: event.payload
+    })), [
+      {
+        shop: 'alpha-shop.myshopify.com',
+        name: 'paywall_shown',
+        payload: { paywall_kind: 'variants_over_cap' }
+      }
+    ]);
   } finally {
     await db.cleanup();
   }
