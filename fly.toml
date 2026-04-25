@@ -6,9 +6,14 @@ primary_region = "nrt"
 [env]
   NODE_ENV = "production"
   PORT = "8787"
+  SQLITE_PATH = "/data/kando1.db"
   SHOPIFY_SCOPES = "read_products,write_products"
   SHOPIFY_API_VERSION = "2025-01"
   MOCK_MODE = "false"
+
+[[mounts]]
+  source = "kando1_data"
+  destination = "/data"
 
 [http_service]
   internal_port = 8787
@@ -28,4 +33,4 @@ primary_region = "nrt"
 [[vm]]
   cpu_kind = "shared"
   cpus = 1
-  memory_mb = 256
+  memory_mb = 1024
