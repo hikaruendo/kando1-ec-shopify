@@ -11,6 +11,8 @@ import { deleteCriticalEventsByShop } from './db/events-repo.js';
 import { deleteJobsByShop, createJob, completeJob, getJobWithSnapshots, incrementJobProgress } from './db/jobs-repo.js';
 import { initializeDb } from './db/index.js';
 import { deleteShopSessionsByShop, getShopSession, saveShopSession } from './db/sessions-repo.js';
+import { deleteUsageByShop } from './db/usage-repo.js';
+import { getRemaining, incrementUsage } from './usage.js';
 import {
   buildInstallUrl,
   getBearerToken,
@@ -187,6 +189,7 @@ export async function createApp({ logger = console, sqlitePath, analytics = null
     deleteJobsByShop(shop);
     deleteShopSessionsByShop(shop);
     deleteCriticalEventsByShop(shop);
+    deleteUsageByShop(shop);
   }
 
   function getEventShop(req, shopContext = {}) {
@@ -405,8 +408,18 @@ export async function createApp({ logger = console, sqlitePath, analytics = null
 
       const variants = await fetchVariantsByProductId(productId, shopContext);
       const out = simulate(variants, rules);
+      const eventShop = getEventShop(req, shopContext);
+      const currentPlan = await getCurrentPlan(eventShop, {
+        accessToken: shopContext.accessToken,
+        logger
+      });
+      if (eventShop) {
+        out.usage = getRemaining(eventShop, currentPlan, {
+          affectedVariants: out.summary.changedVariants
+        });
+      }
       await trackEvent('simulate_run', {
-        shop: getEventShop(req, shopContext),
+        shop: eventShop,
         payload: { affected_variants: out.summary.changedVariants }
       });
       return res.json(out);
@@ -464,6 +477,9 @@ export async function createApp({ logger = console, sqlitePath, analytics = null
 
       completeJob({ jobId, status: 'completed' });
       const job = getJobWithSnapshots(jobId);
+      if (jobShop || eventShop) {
+        incrementUsage(jobShop || eventShop, job.changedCount);
+      }
       await trackEvent('apply_succeeded', {
         shop: jobShop || eventShop,
         payload: {
