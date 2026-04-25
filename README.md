@@ -99,34 +99,80 @@ Plan spec は [docs/managed-pricing.json](docs/managed-pricing.json) を正と�
 
 ### Partner Dashboard 設定手順
 
-1. Partner Dashboard で対象 app を開く
-2. `Distribution` を開く
-3. `Shopify App Store listing` の `Manage listing` を開く
-4. 対象 language の listing を編集する
-5. `Pricing content` の `Manage` を開く
-6. `Settings` で `Managed pricing` を選択する
-7. `Public plans` に `Free Preview` と `Standard` を追加する
-8. 各 public plan の billing model、price、trial days を [docs/managed-pricing.json](docs/managed-pricing.json) に合わせる
-9. English と Japanese の plan description / top features を入力する
-10. `Private plans` に `Founding 10` を追加する
-11. `Founding 10` の billing model、price、description を JSON に合わせる
-12. `Stores with plan access` に招待対象 store domain を追加する
-13. 保存後、dev store で plan selection page を開き、表示と test subscription を確認する
+> 用語ガイド: Shopify の listing 編集画面の左サイドバーは `Pricing details`（`Pricing content` ではない）。本手順内の `Pricing details` はすべてこの sidebar tab を指す。Pricing root（plan の handle / billing model を扱う画面）は listing 編集画面とは別ページで、`Pricing details > Manage` から遷移する。
+
+#### 0. Pricing method を Managed pricing に切り替える（初回のみ）
+
+1. listing 編集画面 → 左 sidebar の `Pricing details` → 右上の `Manage` で Pricing root に入る
+2. Pricing root の右上 `Settings`（歯車アイコン）を開く
+3. `Pricing method` を `Manual pricing` から `Managed pricing` に切り替える（`Switch to managed pricing?` ダイアログで `Switch`）
+4. `Default billing frequency` が **`Yearly`** で表示されるので **`Monthly`** に変更する（[docs/managed-pricing.json](docs/managed-pricing.json) の全 plan が monthly のため）
+5. `Save`
+
+> 注意: 切替時に既存の `free` placeholder plan が残る。これは削除せずそのまま `Free Preview` として編集する設計（handle は `free` のまま、display name で `Free Preview` と表示）。新規 handle で作り直したい場合は、Pricing root の `free` 行 `…` メニューから削除してから `Add` で再作成する。
+
+#### 1. Public plan を作成・編集する
+
+1. Pricing root の `Public plans` で:
+   - 既存の `free` 行を開いて編集する（→ Free Preview として使う）
+   - `Add` で `standard` を新規作成する
+2. 各 public plan の **plan-level 設定**（Pricing root の plan ページ）:
+   - `Internal plan handle`: `free`（既存維持）/ `standard`
+   - `Billing` dropdown: `free` は `Free`、`standard` は `Monthly recurring`（`Monthly recurring, with yearly discount` ではない）
+   - `Monthly charge`: `0` / `9.99`
+   - `Free trial duration`: Day 30 時点では **`0`**（trial は使わない）
+   - `Redirect URL`: `/`
+3. 各 public plan の **listing-level 設定**（listing 編集画面の `Pricing details` 内、各 plan カード）:
+   - `Display name`: `Free Preview` / `Standard`
+   - `Top features`: 各 plan につき 5 個まで（`+ Add` で追加、各 40 文字以内）
+4. `Provide a URL where merchants can find more pricing information (optional)` は空のまま
+5. `I have approval to charge merchants outside of the Shopify Billing API` checkbox は **絶対に check しない**（Shopify policy 違反）
+6. `Save`（listing top の `Unsaved changes` バーから）
+
+> 重要: Managed Pricing の **public plan には「description」フィールドが存在しない**。説明は Display name + Top features の 2 要素のみで構成する。`docs/managed-pricing.json` の `descriptions.en/ja` は内部参照用で UI には反映されない（top features に分解して入力する）。
+
+#### 2. Private plan（Founding 10）を作成する
+
+1. Pricing root の `Private plans` で `Add` を押す
+2. 入力項目（同一ページに display name / description まで含む）:
+   - `Internal plan handle`: `founding_10` と入力すると Shopify が自動で **`founding-10`**（kebab-case）に正規化する。これが正の handle（`docs/managed-pricing.json` の `shopifyHandle` フィールドを参照）
+   - `Billing`: `Monthly recurring`
+   - `Monthly charge`: `7`
+   - `Free trial duration`: `0`
+   - `Redirect URL`: `/`
+   - `Display name`: `Founding 10`
+   - `Description`: `Invite-only early customer plan with Standard-level limits and a 12-month price lock.`（private plan のみ description フィールドあり）
+3. `Stores with plan access` に **最低 1 store を追加する**。Shopify は空保存を許可しない（"At least one target is required" でエラー）。
+   - 招待候補が未確定なら **dev store を placeholder として登録**: `bulk-update-products`（input の suffix が `.myshopify.com`）
+   - 追加後、本物の Founding 10 候補が決まったら `…` メニューから dev store を remove する
+4. `Save`
+
+#### 3. 検証
+
+1. 公開 listing URL（`https://apps.shopify.com/bulk-update-products`）を開き、`Pricing` セクションに `Free Preview` と `Standard` が JSON spec 通り表示されることを確認
+2. **Founding 10（private）は public listing には出ない**。authorized store の admin から確認する:
+   - dev store admin → Apps → bulk-update-products → plan 選択画面で `Founding 10` も含む 3 plans が見えること
+3. test plan selection / test subscription を 1 件実行し、Shopify Billing 側で plan selection flow が OK か確認
 
 ### Founding 10 store 追加手順
 
 1. Partner Dashboard で対象 app を開く
 2. `Distribution` > `Shopify App Store listing` > `Manage listing`
-3. `Pricing content` > `Manage`
-4. `Private plans` の `Founding 10` を編集
-5. `Stores with plan access` に `example.myshopify.com` 形式の store domain を追加
-6. 追加後、対象 merchant に Shopify admin 内の plan selection page から選択してもらう
+3. `Pricing details` > `Manage`（左 sidebar の `Pricing details`、右上の `Manage` ボタン）
+4. Pricing root で `Private plans` 配下の `founding-10` を開く
+5. `Stores with plan access` に `example` 形式（`.myshopify.com` 自動付加）または `example.myshopify.com` 形式で store domain を追加
+6. dev store の placeholder が残っていれば、本物の候補を 1 件以上追加してから dev store を remove する
+7. 追加後、対象 merchant に Shopify admin 内の plan selection page から選択してもらう
 
 注意:
 - private plan は翻訳非対応なので、`Founding 10` の表示文は English で統一する
-- public plan は最大4件まで。Day 30 時点では `Free Preview` と `Standard` の2件だけ使い、`Pro` と将来枠を残す
+- private plan は **必ず最低 1 store** を `Stores with plan access` に持つ必要がある（Shopify 仕様）
+- private plan handle は **kebab-case に自動正規化される**（`founding_10` → `founding-10`）。API 呼び出しは正規化後の handle を使う
+- public plan は最大 4 件まで。Day 30 時点では `Free Preview` と `Standard` の 2 件だけ使い、`Pro` と将来枠を残す
+- public plan に "description" フィールドは無い（Display name + Top features の 2 要素のみ）。Private plan のみ description あり
 - trial は Day 30 時点では付けない。`Pro` 公開時のみ 14日 trial を使う
 - Managed Pricing を使うため、自前 billing や Stripe は追加しない
+- `I have approval to charge merchants outside of the Shopify Billing API` の checkbox は絶対に check しない
 
 ## Example
 ```bash

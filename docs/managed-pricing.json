@@ -4,10 +4,14 @@
   "source": {
     "shopifyDocs": "https://shopify.dev/docs/apps/launch/billing/managed-pricing",
     "verifiedAt": "2026-04-25",
+    "configuredAt": "2026-04-25",
     "notes": [
       "Managed Pricing is configured in the Shopify Partner Dashboard, not through repository code.",
       "Public plans are visible to all merchants and are limited to four public plans.",
-      "Private plans are visible only to authorized stores, support up to 20 stores per private plan, and do not support translations."
+      "Private plans are visible only to authorized stores, support up to 20 stores per private plan, and do not support translations.",
+      "Plan id in this JSON is logical (snake_case). Shopify Partner Dashboard normalizes handles to kebab-case (e.g. founding_10 -> founding-10) and the existing 'free' placeholder handle was retained for free_preview rather than recreated. Use shopifyHandle when calling Shopify APIs.",
+      "Founding 10 currently authorizes the dev store (bulk-update-products.myshopify.com) as a placeholder so the plan can be saved. Replace with real Founding 10 candidates as they are recruited; the dev store entry can be removed once at least one real candidate is added.",
+      "Default billing frequency is set to Monthly in Pricing > Settings (changed from Yearly). All plans use Monthly recurring billing."
     ]
   },
   "currency": "USD",
@@ -23,6 +27,7 @@
   "plans": [
     {
       "id": "free_preview",
+      "shopifyHandle": "free",
       "visibility": "public",
       "billing": {
         "type": "free",
@@ -63,6 +68,7 @@
     },
     {
       "id": "standard",
+      "shopifyHandle": "standard",
       "visibility": "public",
       "billing": {
         "type": "monthly",
@@ -103,6 +109,7 @@
     },
     {
       "id": "founding_10",
+      "shopifyHandle": "founding-10",
       "visibility": "private",
       "billing": {
         "type": "monthly",
@@ -127,7 +134,16 @@
         "authorizedStoresMax": 20,
         "priceLockMonths": 12
       },
-      "authorizedStores": []
+      "authorizedStores": [
+        "bulk-update-products.myshopify.com"
+      ],
+      "authorizedStoresMeta": {
+        "bulk-update-products.myshopify.com": {
+          "kind": "dev_store_placeholder",
+          "addedAt": "2026-04-25",
+          "purpose": "Required by Shopify (private plan needs >= 1 store). Replace or remove after first real Founding 10 candidate is added."
+        }
+      }
     }
   ],
   "futurePlans": [
