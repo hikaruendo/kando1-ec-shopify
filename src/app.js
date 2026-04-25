@@ -5,6 +5,8 @@ import { readFile } from 'node:fs/promises';
 import { simulate } from './rules.js';
 import { fetchVariantsByProductId, updateVariantPrice } from './shopifyClient.js';
 import { consumeOauthState, nextJobId, saveOauthState } from './store.js';
+import { createAnalytics } from './analytics.js';
+import { deleteCriticalEventsByShop } from './db/events-repo.js';
 import { deleteJobsByShop, createJob, completeJob, getJobWithSnapshots, incrementJobProgress } from './db/jobs-repo.js';
 import { initializeDb } from './db/index.js';
 import { deleteShopSessionsByShop, getShopSession, saveShopSession } from './db/sessions-repo.js';
@@ -66,13 +68,15 @@ function getShopFromRequest(req) {
   );
 }
 
-export async function createApp({ logger = console, sqlitePath } = {}) {
+export async function createApp({ logger = console, sqlitePath, analytics = null } = {}) {
   if (sqlitePath) {
     process.env.SQLITE_PATH = sqlitePath;
   }
 
   const config = readConfig();
   await initializeDb(process.env.SQLITE_PATH);
+  const eventTracker = analytics || createAnalytics({ logger });
+  const firstAppLoadShops = new Set();
 
   function getSessionByShop(shop) {
     const envShop = normalizeShop(config.SHOPIFY_SHOP_DOMAIN);
@@ -181,6 +185,15 @@ export async function createApp({ logger = console, sqlitePath } = {}) {
     if (!shop) return;
     deleteJobsByShop(shop);
     deleteShopSessionsByShop(shop);
+    deleteCriticalEventsByShop(shop);
+  }
+
+  function getEventShop(req, shopContext = {}) {
+    return normalizeShop(shopContext.shop || getShopFromRequest(req) || config.SHOPIFY_SHOP_DOMAIN);
+  }
+
+  async function trackEvent(name, { shop, payload = {} } = {}) {
+    await eventTracker.trackSafe(name, { shop: normalizeShop(shop), payload });
   }
 
   async function resolveJobRequest(req) {
@@ -229,6 +242,10 @@ export async function createApp({ logger = console, sqlitePath } = {}) {
       cleanupShopData(shop);
     }
 
+    if (topic === 'app/uninstalled') {
+      trackEvent('app_uninstalled', { shop, payload: { topic } });
+    }
+
     logger?.log?.('[webhook]', JSON.stringify({ topic, shop }));
     return res.status(200).json({ ok: true });
   });
@@ -249,6 +266,17 @@ export async function createApp({ logger = console, sqlitePath } = {}) {
     return (async () => {
       const authError = assertAuthConfig();
       if (authError) return res.status(500).send(authError);
+
+      const shop = normalizeShop(req.query.shop || req.get('x-shopify-shop-domain'));
+      if (shop && !firstAppLoadShops.has(shop)) {
+        firstAppLoadShops.add(shop);
+        trackEvent('first_app_load', {
+          shop,
+          payload: {
+            locale: String(req.query.locale || req.get('accept-language') || '').slice(0, 32)
+          }
+        });
+      }
 
       const html = await renderIndexHtml();
       return res.type('html').send(html);
@@ -317,6 +345,10 @@ export async function createApp({ logger = console, sqlitePath } = {}) {
         scope: tokenBody.scope || config.SHOPIFY_SCOPES,
         source: 'oauth'
       });
+      await trackEvent('app_installed', {
+        shop,
+        payload: { installed_at: Date.now() }
+      });
 
       const redirect = new URL('/', config.appBaseUrl);
       redirect.searchParams.set('shop', shop);
@@ -357,6 +389,10 @@ export async function createApp({ logger = console, sqlitePath } = {}) {
 
       const variants = await fetchVariantsByProductId(productId, shopContext);
       const out = simulate(variants, rules);
+      await trackEvent('simulate_run', {
+        shop: getEventShop(req, shopContext),
+        payload: { affected_variants: out.summary.changedVariants }
+      });
       return res.json(out);
     } catch (e) {
       return res.status(500).json({ error: String(e) });
@@ -375,6 +411,11 @@ export async function createApp({ logger = console, sqlitePath } = {}) {
       const variants = await fetchVariantsByProductId(productId, shopContext);
       const sim = simulate(variants, rules);
       const changed = sim.diffs.filter(d => d.changed);
+      const eventShop = getEventShop(req, shopContext);
+      await trackEvent('apply_started', {
+        shop: eventShop,
+        payload: { affected_variants: changed.length }
+      });
 
       jobId = nextJobId();
       const jobShop = config.mockMode
@@ -408,6 +449,15 @@ export async function createApp({ logger = console, sqlitePath } = {}) {
 
       completeJob({ jobId, status: 'completed' });
       const job = getJobWithSnapshots(jobId);
+      await trackEvent('apply_succeeded', {
+        shop: jobShop || eventShop,
+        payload: {
+          jobId,
+          changed_count: job.changedCount,
+          error_count: job.errorCount,
+          affected_variants: changed.length
+        }
+      });
       return res.json({
         jobId,
         status: 'completed',
@@ -423,6 +473,10 @@ export async function createApp({ logger = console, sqlitePath } = {}) {
           // Ignore secondary persistence errors while handling the original failure.
         }
       }
+      await trackEvent('apply_failed', {
+        shop: normalizeShop(getShopFromRequest(req) || config.SHOPIFY_SHOP_DOMAIN),
+        payload: { reason: String(e.message || e).slice(0, 240) }
+      });
       return res.status(500).json({ error: String(e) });
     }
   });
@@ -450,7 +504,27 @@ export async function createApp({ logger = console, sqlitePath } = {}) {
       }
     }
 
+    await trackEvent('undo_succeeded', {
+      shop: job.shop || getEventShop(req, shopContext),
+      payload: { jobId: job.id, restored_count: restoredCount, error_count: errors.length }
+    });
     return res.json({ ok: errors.length === 0, restoredCount, errorCount: errors.length, errors });
+  });
+
+  app.post('/api/events', async (req, res) => {
+    const allowedEvents = new Set(['paywall_shown', 'paywall_clicked_upgrade']);
+    const { name, payload = {} } = req.body || {};
+    if (!allowedEvents.has(name)) {
+      return res.status(400).json({ error: 'unsupported event' });
+    }
+
+    const shopContext = await resolveShopContext(req);
+    if (shopContext.error) return res.status(shopContext.error.status).json(shopContext.error.body);
+    await trackEvent(name, {
+      shop: getEventShop(req, shopContext),
+      payload
+    });
+    return res.json({ ok: true });
   });
 
   return app;
