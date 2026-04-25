@@ -84,6 +84,50 @@ npm run dev
 - 機密情報（`.env`、シークレット、トークン）をコミットしていないことを確認
 - 申請・公開後に実ストアで再検証
 
+## Managed Pricing 設定
+
+Plan spec は [docs/managed-pricing.json](docs/managed-pricing.json) を正とする。Shopify Managed Pricing は Partner Dashboard で設定するため、この JSON は実装コードではなく運用・レビュー用の source of truth。
+
+参照:
+- [Managed App Pricing](https://shopify.dev/docs/apps/launch/billing/managed-pricing)
+
+### Day 30 plan
+
+- `Free Preview`: public, `$0/mo`
+- `Standard`: public, `$9.99/mo`
+- `Founding 10`: private, `$7/mo`, 最大20 store, Standard相当, 12ヶ月 price lock
+
+### Partner Dashboard 設定手順
+
+1. Partner Dashboard で対象 app を開く
+2. `Distribution` を開く
+3. `Shopify App Store listing` の `Manage listing` を開く
+4. 対象 language の listing を編集する
+5. `Pricing content` の `Manage` を開く
+6. `Settings` で `Managed pricing` を選択する
+7. `Public plans` に `Free Preview` と `Standard` を追加する
+8. 各 public plan の billing model、price、trial days を [docs/managed-pricing.json](docs/managed-pricing.json) に合わせる
+9. English と Japanese の plan description / top features を入力する
+10. `Private plans` に `Founding 10` を追加する
+11. `Founding 10` の billing model、price、description を JSON に合わせる
+12. `Stores with plan access` に招待対象 store domain を追加する
+13. 保存後、dev store で plan selection page を開き、表示と test subscription を確認する
+
+### Founding 10 store 追加手順
+
+1. Partner Dashboard で対象 app を開く
+2. `Distribution` > `Shopify App Store listing` > `Manage listing`
+3. `Pricing content` > `Manage`
+4. `Private plans` の `Founding 10` を編集
+5. `Stores with plan access` に `example.myshopify.com` 形式の store domain を追加
+6. 追加後、対象 merchant に Shopify admin 内の plan selection page から選択してもらう
+
+注意:
+- private plan は翻訳非対応なので、`Founding 10` の表示文は English で統一する
+- public plan は最大4件まで。Day 30 時点では `Free Preview` と `Standard` の2件だけ使い、`Pro` と将来枠を残す
+- trial は Day 30 時点では付けない。`Pro` 公開時のみ 14日 trial を使う
+- Managed Pricing を使うため、自前 billing や Stripe は追加しない
+
 ## Example
 ```bash
 curl -X POST http://localhost:8787/api/simulate \

@@ -1,0 +1,176 @@
+{
+  "schemaVersion": 1,
+  "updatedAt": "2026-04-25",
+  "source": {
+    "shopifyDocs": "https://shopify.dev/docs/apps/launch/billing/managed-pricing",
+    "verifiedAt": "2026-04-25",
+    "notes": [
+      "Managed Pricing is configured in the Shopify Partner Dashboard, not through repository code.",
+      "Public plans are visible to all merchants and are limited to four public plans.",
+      "Private plans are visible only to authorized stores, support up to 20 stores per private plan, and do not support translations."
+    ]
+  },
+  "currency": "USD",
+  "billingProvider": "shopify_managed_pricing",
+  "publicPlanSlots": {
+    "maxPublicPlans": 4,
+    "usedAtDay30": 2,
+    "reservedFuturePlans": [
+      "Pro",
+      "Scale public variant if ever needed"
+    ]
+  },
+  "plans": [
+    {
+      "id": "free_preview",
+      "visibility": "public",
+      "billing": {
+        "type": "free",
+        "price": 0,
+        "interval": null,
+        "trialDays": 0
+      },
+      "names": {
+        "en": "Free Preview",
+        "ja": "Free Preview"
+      },
+      "descriptions": {
+        "en": "Preview variant price changes safely before applying. Best for testing small price updates.",
+        "ja": "バリアント価格の変更を安全にプレビューできます。小規模な価格更新の検証に向いています。"
+      },
+      "topFeatures": {
+        "en": [
+          "Preview bulk variant price changes",
+          "Apply up to 100 variants per task",
+          "Run up to 3 completed tasks per month",
+          "7-day job history",
+          "Rollback for the latest task only"
+        ],
+        "ja": [
+          "バリアント価格の一括変更をプレビュー",
+          "1タスクあたり最大100 variantsまで反映",
+          "月3回までタスクを完了可能",
+          "7日間のジョブ履歴",
+          "直近タスクのみロールバック可能"
+        ]
+      },
+      "caps": {
+        "variantsPerTask": 100,
+        "completedTasksPerMonth": 3,
+        "historyDays": 7,
+        "rollback": "latest_task_only"
+      }
+    },
+    {
+      "id": "standard",
+      "visibility": "public",
+      "billing": {
+        "type": "monthly",
+        "price": 9.99,
+        "interval": "month",
+        "trialDays": 0
+      },
+      "names": {
+        "en": "Standard",
+        "ja": "Standard"
+      },
+      "descriptions": {
+        "en": "Bulk edit larger variant sets with broader monthly usage and full rollback history.",
+        "ja": "より大きなバリアント群を一括編集し、月間利用枠とロールバック履歴を拡張できます。"
+      },
+      "topFeatures": {
+        "en": [
+          "Apply up to 5,000 variants per task",
+          "Run up to 20 completed tasks per month",
+          "30-day job history",
+          "Rollback any retained job",
+          "Preview before every apply"
+        ],
+        "ja": [
+          "1タスクあたり最大5,000 variantsまで反映",
+          "月20回までタスクを完了可能",
+          "30日間のジョブ履歴",
+          "保持期間内の任意ジョブをロールバック",
+          "反映前に毎回プレビュー"
+        ]
+      },
+      "caps": {
+        "variantsPerTask": 5000,
+        "completedTasksPerMonth": 20,
+        "historyDays": 30,
+        "rollback": "all_retained_jobs"
+      }
+    },
+    {
+      "id": "founding_10",
+      "visibility": "private",
+      "billing": {
+        "type": "monthly",
+        "price": 7,
+        "interval": "month",
+        "trialDays": 0
+      },
+      "name": "Founding 10",
+      "description": "Invite-only early customer plan with Standard-level limits and a 12-month price lock.",
+      "topFeatures": [
+        "Standard-level usage limits",
+        "Up to 5,000 variants per task",
+        "Up to 20 completed tasks per month",
+        "30-day job history",
+        "12-month price lock for invited stores"
+      ],
+      "caps": {
+        "variantsPerTask": 5000,
+        "completedTasksPerMonth": 20,
+        "historyDays": 30,
+        "rollback": "all_retained_jobs",
+        "authorizedStoresMax": 20,
+        "priceLockMonths": 12
+      },
+      "authorizedStores": []
+    }
+  ],
+  "futurePlans": [
+    {
+      "id": "pro",
+      "targetPhase": "P2",
+      "visibility": "public",
+      "billing": {
+        "type": "monthly",
+        "price": 24.99,
+        "interval": "month",
+        "trialDays": 14
+      },
+      "caps": {
+        "variantsPerTask": 50000,
+        "completedTasksPerMonth": null,
+        "historyDays": 90,
+        "features": [
+          "schedule",
+          "auto_revert",
+          "saved_templates",
+          "priority_support"
+        ]
+      }
+    },
+    {
+      "id": "scale",
+      "targetPhase": "P3",
+      "visibility": "private",
+      "billing": {
+        "type": "monthly",
+        "priceStartingAt": 79,
+        "interval": "month",
+        "trialDays": 0
+      },
+      "caps": {
+        "variantsPerTask": 250000,
+        "historyDays": 180,
+        "features": [
+          "custom_limits",
+          "onboarding_support"
+        ]
+      }
+    }
+  ]
+}
