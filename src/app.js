@@ -12,6 +12,7 @@ import { deleteJobsByShop, createJob, completeJob, getJobWithSnapshots, incremen
 import { initializeDb } from './db/index.js';
 import { deleteShopSessionsByShop, getShopSession, saveShopSession } from './db/sessions-repo.js';
 import { deleteUsageByShop } from './db/usage-repo.js';
+import { shouldPromptForReview } from './review-prompts.js';
 import { evaluateUsageLimit, getRemaining, getUsage, incrementUsage } from './usage.js';
 import {
   buildInstallUrl,
@@ -533,12 +534,14 @@ export async function createApp({ logger = console, sqlitePath, analytics = null
           affected_variants: changed.length
         }
       });
+      const shouldReviewPrompt = shouldPromptForReview(jobShop || eventShop, 'apply_succeeded');
       return res.json({
         jobId,
         status: 'completed',
         changedCount: job.changedCount,
         errorCount: job.errorCount,
-        firstError: job.errors?.[0]?.message || null
+        firstError: job.errors?.[0]?.message || null,
+        reviewPrompt: { shouldShow: shouldReviewPrompt, trigger: shouldReviewPrompt ? 'apply_succeeded' : null }
       });
     } catch (e) {
       if (jobId) {
@@ -583,11 +586,24 @@ export async function createApp({ logger = console, sqlitePath, analytics = null
       shop: job.shop || getEventShop(req, shopContext),
       payload: { jobId: job.id, restored_count: restoredCount, error_count: errors.length }
     });
-    return res.json({ ok: errors.length === 0, restoredCount, errorCount: errors.length, errors });
+    const reviewShop = job.shop || getEventShop(req, shopContext);
+    const shouldReviewPrompt = shouldPromptForReview(reviewShop, 'undo_succeeded');
+    return res.json({
+      ok: errors.length === 0,
+      restoredCount,
+      errorCount: errors.length,
+      errors,
+      reviewPrompt: { shouldShow: shouldReviewPrompt, trigger: shouldReviewPrompt ? 'undo_succeeded' : null }
+    });
   });
 
   app.post('/api/events', async (req, res) => {
-    const allowedEvents = new Set(['paywall_shown', 'paywall_clicked_upgrade']);
+    const allowedEvents = new Set([
+      'paywall_shown',
+      'paywall_clicked_upgrade',
+      'review_prompt_shown',
+      'review_prompt_dismissed'
+    ]);
     const { name, payload = {} } = req.body || {};
     if (!allowedEvents.has(name)) {
       return res.status(400).json({ error: 'unsupported event' });

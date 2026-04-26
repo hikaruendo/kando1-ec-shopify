@@ -5,7 +5,9 @@ export const CRITICAL_EVENT_NAMES = new Set([
   'apply_succeeded',
   'undo_succeeded',
   'paywall_shown',
-  'paywall_clicked_upgrade'
+  'paywall_clicked_upgrade',
+  'review_prompt_shown',
+  'review_prompt_dismissed'
 ]);
 
 function isPrimitive(value) {

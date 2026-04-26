@@ -34,7 +34,8 @@ test('apply -> restart -> get/undo preserves API shape and shop isolation', asyn
       status: 'completed',
       changedCount: 3,
       errorCount: 0,
-      firstError: null
+      firstError: null,
+      reviewPrompt: { shouldShow: false, trigger: null }
     });
     assert.equal(getUsage('alpha-shop.myshopify.com').completedTasks, 1);
     assert.equal(getUsage('alpha-shop.myshopify.com').affectedVariantsTotal, 3);
@@ -101,12 +102,42 @@ test('apply -> restart -> get/undo preserves API shape and shop isolation', asyn
       ok: true,
       restoredCount: 3,
       errorCount: 0,
-      errors: []
+      errors: [],
+      reviewPrompt: { shouldShow: true, trigger: 'undo_succeeded' }
     });
     assert.equal(listCriticalEvents({
       shop: 'alpha-shop.myshopify.com',
       name: 'undo_succeeded'
     }).length, 1);
+  } finally {
+    await db.cleanup();
+  }
+});
+
+test('second successful apply returns review prompt request once', async () => {
+  const db = await createTempDb();
+  try {
+    const createApp = await loadCreateApp();
+    const app = await createApp({ sqlitePath: db.sqlitePath });
+    const payload = {
+      shop: 'alpha-shop.myshopify.com',
+      productId: 'gid://shopify/Product/123',
+      rules: [
+        {
+          priority: 1,
+          conditions: [{ field: 'option2', op: 'equals', value: 'Pro' }],
+          action: { type: 'add', value: 100 }
+        }
+      ]
+    };
+
+    const first = await request(app).post('/api/apply').send(payload);
+    const second = await request(app).post('/api/apply').send(payload);
+
+    assert.equal(first.status, 200);
+    assert.equal(second.status, 200);
+    assert.deepStrictEqual(first.body.reviewPrompt, { shouldShow: false, trigger: null });
+    assert.deepStrictEqual(second.body.reviewPrompt, { shouldShow: true, trigger: 'apply_succeeded' });
   } finally {
     await db.cleanup();
   }

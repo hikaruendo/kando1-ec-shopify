@@ -640,6 +640,39 @@ async function trackPaywallEvent(name, payload) {
   }
 }
 
+async function trackAppEvent(name, payload) {
+  try {
+    await fetch('/api/events', {
+      method: 'POST',
+      headers: await buildApiHeaders(),
+      body: JSON.stringify({ name, shop: getShop(), payload })
+    });
+  } catch {
+    // Tracking must not block merchant workflows.
+  }
+}
+
+async function maybeRequestReview(reviewPrompt) {
+  if (!reviewPrompt?.shouldShow) return;
+  const shopify = getShopifyGlobal();
+  if (!shopify?.reviews || typeof shopify.reviews.request !== 'function') return;
+
+  try {
+    const response = await shopify.reviews.request();
+    await trackAppEvent(response?.success ? 'review_prompt_shown' : 'review_prompt_dismissed', {
+      trigger: reviewPrompt.trigger,
+      code: response?.code || null,
+      message: response?.message || null
+    });
+  } catch (error) {
+    await trackAppEvent('review_prompt_dismissed', {
+      trigger: reviewPrompt.trigger,
+      code: 'request_failed',
+      message: String(error?.message || error)
+    });
+  }
+}
+
 function hidePaywall() {
   paywallEl.classList.add('hidden');
   paywallEl.replaceChildren();
@@ -843,6 +876,7 @@ document.getElementById('apply').onclick = async () => {
     hidePaywall();
     summaryEl.innerHTML = `<b>${t('applyDoneLabel')}</b>: jobId=${data.jobId}, changed=${data.changedCount}, errors=${data.errorCount}${firstError}`;
     refreshUsageMeter();
+    maybeRequestReview(data.reviewPrompt);
   } catch (e) {
     if (e.paywall) {
       renderPaywall(e.usage || { paywall: e.paywall });
