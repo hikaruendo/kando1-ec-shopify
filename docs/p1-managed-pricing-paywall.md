@@ -456,3 +456,94 @@ tests 18
 pass 18
 fail 0
 ```
+
+## P1-7 Uninstall webhook / GDPR webhooks
+
+Branch: `codex/p1-7-webhook-compliance`
+PR: 未作成
+
+### 変更内容
+
+- `shopify.app.toml` の webhook 登録内容をテストで固定した。
+- `app/uninstalled` は `/webhooks` で受け、shop 単位の persisted data を削除する。
+- compliance topics は `/webhooks` で受ける。
+- `customers/data_request` は customer data を保持していないため no-op `200`。
+- `customers/redact` は customer data を保持していないため no-op `200`。
+- `shop/redact` は shop 単位の persisted data を削除する。
+- customer compliance payload の本文をログに出さないことをテストで固定した。
+
+### Shopify docs 確認
+
+Shopify docs では app-specific webhooks を `shopify.app.toml` に設定し、`shopify app deploy` で反映する方式が推奨されている。
+
+登録内容:
+
+```toml
+[webhooks]
+api_version = "2026-01"
+
+[[webhooks.subscriptions]]
+compliance_topics = ["customers/data_request", "customers/redact", "shop/redact"]
+uri = "/webhooks"
+
+[[webhooks.subscriptions]]
+topics = ["app/uninstalled"]
+uri = "/webhooks"
+```
+
+参照:
+
+- https://shopify.dev/docs/api/shopify-app-remix/latest/guide-webhooks
+- https://shopify.dev/docs/apps/build/compliance/privacy-law-compliance
+
+### cleanup 対象
+
+`app/uninstalled` / `shop/redact` で削除するもの:
+
+- `jobs`
+- `job_snapshots`
+- `shop_sessions`
+- `events`
+- `usage_monthly`
+
+### Acceptance Status
+
+- [x] 4 webhooks が `shopify.app.toml` に登録されている。
+- [x] HMAC 検証は `/webhooks` で必須。
+- [x] invalid HMAC は `401` を返す。
+- [x] `app/uninstalled` で対象 shop の persisted data を削除する。
+- [x] `shop/redact` で対象 shop の persisted data を削除する。
+- [x] `customers/data_request` は no-op `200`。
+- [x] `customers/redact` は no-op `200`。
+- [x] customer payload の email / phone をログに残さない。
+- [ ] Shopify CLI webhook testing は本番 app config deploy 後に手動確認が必要。
+
+### Verification
+
+```bash
+npm test
+```
+
+Result:
+
+```text
+tests 20
+pass 20
+fail 0
+```
+
+### Deploy / manual check
+
+設定反映:
+
+```bash
+shopify app deploy
+```
+
+手動確認:
+
+```bash
+npm test
+```
+
+Shopify CLI の webhook testing は、Partner Dashboard / Shopify CLI の対象 app config が本番 app と一致している状態で実施する。
