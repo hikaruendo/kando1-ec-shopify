@@ -10,6 +10,7 @@ const shopEl = document.getElementById('shop');
 const shopStatusEl = document.getElementById('shopStatus');
 const connectShopBtn = document.getElementById('connectShop');
 const shopSectionEl = document.getElementById('shopSection');
+const paywallEl = document.getElementById('paywall');
 
 let valueCandidatesCache = null;
 
@@ -76,7 +77,12 @@ const I18N = {
     opIn: 'in (multi-select)',
     actionAdd: 'add',
     actionSet: 'set',
-    actionMultiply: 'multiply'
+    actionMultiply: 'multiply',
+    variantsOverCap: 'This preview affects {variants} variants. Free is limited to {cap} variants/run. Upgrade to Standard ($9.99/mo) to apply this preview as-is.',
+    variantsOverCapCurrent: 'This preview affects {variants} variants. Your current plan is limited to {cap} variants/run. Upgrade to {plan} ({price}/mo) to apply this preview as-is.',
+    tasksOverCap: 'You have used all {cap} free runs this month. Upgrade to Standard ($9.99/mo) to apply this preview.',
+    tasksOverCapCurrent: 'You have used all {cap} runs this month. Upgrade to {plan} ({price}/mo) to apply this preview.',
+    upgradeButton: 'Upgrade'
   },
   ja: {
     appTitle: '一括価格ルールビルダー',
@@ -137,7 +143,12 @@ const I18N = {
     opIn: 'いずれか（複数選択）',
     actionAdd: '加算',
     actionSet: '上書き',
-    actionMultiply: '乗算'
+    actionMultiply: '乗算',
+    variantsOverCap: '今回の更新は {variants} variants が対象です。Free は {cap} variants/回 までです。Standard（$9.99/mo）にアップグレードすると、このプレビューのまま実行できます。',
+    variantsOverCapCurrent: '今回の更新は {variants} variants が対象です。現在のプランは {cap} variants/回 までです。{plan}（{price}/mo）にアップグレードすると、このプレビューのまま実行できます。',
+    tasksOverCap: '今月の無料実行回数 {cap} 回は使い切りました。Standard（$9.99/mo）にアップグレードすると、このプレビューを実行できます。',
+    tasksOverCapCurrent: '今月の実行回数 {cap} 回は使い切りました。{plan}（{price}/mo）にアップグレードすると、このプレビューを実行できます。',
+    upgradeButton: 'アップグレード'
   }
 };
 
@@ -564,13 +575,78 @@ async function request(path, rules = collectRules()) {
   if (!res.ok) {
     const err = new Error(typeof payload === 'object' ? payload?.error || JSON.stringify(payload) : String(payload));
     if (payload?.authUrl) err.authUrl = payload.authUrl;
+    if (payload?.paywall) err.paywall = payload.paywall;
+    if (payload?.usage) err.usage = payload.usage;
     throw err;
   }
   return payload;
 }
 
+async function trackPaywallEvent(name, payload) {
+  try {
+    await fetch('/api/events', {
+      method: 'POST',
+      headers: await buildApiHeaders(),
+      body: JSON.stringify({ name, shop: getShop(), payload })
+    });
+  } catch {
+    // Analytics must not block the primary workflow.
+  }
+}
+
+function hidePaywall() {
+  paywallEl.classList.add('hidden');
+  paywallEl.replaceChildren();
+  document.getElementById('apply').disabled = false;
+}
+
+function getPaywallMessage(usage) {
+  const paywall = usage?.paywall;
+  if (!paywall?.shouldBlockApply) return '';
+  const vars = {
+    variants: usage.affectedVariantsInThisPreview,
+    cap: paywall.kind === 'tasks_over_cap' ? usage.planCaps.tasksPerMonth : usage.planCaps.variantsPerTask,
+    plan: paywall.suggestedPlan,
+    price: paywall.suggestedPlanPrice
+  };
+  if (usage.currentPlan === 'free_preview' && paywall.kind === 'tasks_over_cap') return t('tasksOverCap', vars);
+  if (usage.currentPlan === 'free_preview') return t('variantsOverCap', vars);
+  if (paywall.kind === 'tasks_over_cap') return t('tasksOverCapCurrent', vars);
+  return t('variantsOverCapCurrent', vars);
+}
+
+function renderPaywall(usage) {
+  const paywall = usage?.paywall;
+  if (!paywall?.shouldBlockApply) {
+    hidePaywall();
+    return;
+  }
+
+  const message = document.createElement('p');
+  message.textContent = getPaywallMessage(usage);
+
+  const link = document.createElement('a');
+  const upgradeUrl = new URL(paywall.upgradeUrl || '#', window.location.origin);
+  const shop = getShop();
+  if (shop) upgradeUrl.searchParams.set('shop', shop);
+  link.href = upgradeUrl.toString();
+  link.textContent = t('upgradeButton');
+  link.onclick = () => {
+    trackPaywallEvent('paywall_clicked_upgrade', {
+      target_plan: paywall.suggestedPlan,
+      paywall_kind: paywall.kind
+    });
+  };
+
+  paywallEl.replaceChildren(message, link);
+  paywallEl.classList.remove('hidden');
+  document.getElementById('apply').disabled = true;
+  trackPaywallEvent('paywall_shown', { paywall_kind: paywall.kind });
+}
+
 function renderSim(data) {
   summaryEl.innerHTML = `<b>${t('summaryLabel')}</b>: total=${data.summary.totalVariants}, changed=${data.summary.changedVariants}`;
+  renderPaywall(data.usage);
   const rows = data.diffs.map(d => `
     <tr>
       <td>${d.variantId}</td>
@@ -619,6 +695,7 @@ document.getElementById('simulate').onclick = async () => {
     const data = await request('/api/simulate');
     renderSim(data);
   } catch (e) {
+    hidePaywall();
     renderRequestError(t('simulateError'), e);
   }
 };
@@ -627,8 +704,12 @@ document.getElementById('apply').onclick = async () => {
   try {
     const data = await request('/api/apply');
     const firstError = data.firstError ? `, firstError=${escapeHtml(data.firstError)}` : '';
+    hidePaywall();
     summaryEl.innerHTML = `<b>${t('applyDoneLabel')}</b>: jobId=${data.jobId}, changed=${data.changedCount}, errors=${data.errorCount}${firstError}`;
   } catch (e) {
+    if (e.paywall) {
+      renderPaywall(e.usage || { paywall: e.paywall });
+    }
     renderRequestError(t('applyError'), e);
   }
 };

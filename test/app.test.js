@@ -5,7 +5,7 @@ import { closeAllDbs } from '../src/db/index.js';
 import { listCriticalEvents, recordCriticalEvent } from '../src/db/events-repo.js';
 import { createJob, getJobWithSnapshots } from '../src/db/jobs-repo.js';
 import { getShopSession, saveShopSession } from '../src/db/sessions-repo.js';
-import { getUsage } from '../src/usage.js';
+import { getUsage, incrementUsage } from '../src/usage.js';
 import { createTempDb, loadCreateApp, signWebhookPayload } from './helpers.js';
 
 test('apply -> restart -> get/undo preserves API shape and shop isolation', async () => {
@@ -248,11 +248,88 @@ test('simulate response includes upcoming usage without changing existing previe
       affectedVariantsInThisPreview: 3,
       monthlyTasksUsed: 1,
       monthlyTasksRemaining: 2,
-      affectedVariantsTotalThisMonth: 3
+      affectedVariantsTotalThisMonth: 3,
+      paywall: {
+        kind: null,
+        shouldBlockApply: false,
+        suggestedPlan: null,
+        suggestedPlanPrice: null,
+        upgradeUrl: null
+      }
     });
   } finally {
     if (previousPlan === undefined) delete process.env.MOCK_CURRENT_PLAN;
     else process.env.MOCK_CURRENT_PLAN = previousPlan;
+    await db.cleanup();
+  }
+});
+
+test('hard paywall appears in simulate and blocks apply when monthly task cap is reached', async () => {
+  const db = await createTempDb();
+  const previousPlan = process.env.MOCK_CURRENT_PLAN;
+  try {
+    process.env.MOCK_CURRENT_PLAN = 'free_preview';
+    const createApp = await loadCreateApp();
+    const app = await createApp({ sqlitePath: db.sqlitePath });
+
+    incrementUsage('alpha-shop.myshopify.com', 1);
+    incrementUsage('alpha-shop.myshopify.com', 1);
+    incrementUsage('alpha-shop.myshopify.com', 1);
+
+    const payload = {
+      shop: 'alpha-shop.myshopify.com',
+      productId: 'gid://shopify/Product/123',
+      rules: [
+        {
+          priority: 1,
+          conditions: [{ field: 'option2', op: 'equals', value: 'Pro' }],
+          action: { type: 'add', value: 100 }
+        }
+      ]
+    };
+
+    const simulateResponse = await request(app)
+      .post('/api/simulate')
+      .send(payload);
+    assert.equal(simulateResponse.status, 200);
+    assert.deepStrictEqual(simulateResponse.body.usage.paywall, {
+      kind: 'tasks_over_cap',
+      shouldBlockApply: true,
+      suggestedPlan: 'standard',
+      suggestedPlanPrice: '$9.99',
+      upgradeUrl: '/billing/upgrade?plan=standard'
+    });
+
+    const applyResponse = await request(app)
+      .post('/api/apply')
+      .send(payload);
+    assert.equal(applyResponse.status, 402);
+    assert.equal(applyResponse.body.error, 'paywall');
+    assert.equal(applyResponse.body.usage.paywall.kind, 'tasks_over_cap');
+    assert.equal(getUsage('alpha-shop.myshopify.com').completedTasks, 3);
+  } finally {
+    if (previousPlan === undefined) delete process.env.MOCK_CURRENT_PLAN;
+    else process.env.MOCK_CURRENT_PLAN = previousPlan;
+    await db.cleanup();
+  }
+});
+
+test('billing upgrade redirects to Shopify hosted managed pricing page', async () => {
+  const db = await createTempDb();
+  try {
+    const createApp = await loadCreateApp();
+    const app = await createApp({ sqlitePath: db.sqlitePath });
+
+    const response = await request(app)
+      .get('/billing/upgrade')
+      .query({ shop: 'bulk-update-products.myshopify.com', plan: 'standard' });
+
+    assert.equal(response.status, 302);
+    assert.equal(
+      response.headers.location,
+      'https://admin.shopify.com/store/bulk-update-products/charges/bulk-update-products/pricing_plans'
+    );
+  } finally {
     await db.cleanup();
   }
 });

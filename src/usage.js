@@ -50,6 +50,12 @@ export function getUsage(shop, { now = new Date() } = {}) {
 export function getRemaining(shop, plan, { now = new Date(), affectedVariants = 0 } = {}) {
   const usage = getUsage(shop, { now });
   const planCaps = getPlanCaps(plan);
+  const affectedVariantsInThisPreview = Number(affectedVariants || 0);
+  const paywallDecision = evaluateUsageLimit({
+    plan,
+    affectedVariants: affectedVariantsInThisPreview,
+    monthlyCompletedTasks: usage.completedTasks
+  });
   const tasksLimit = planCaps.tasksPerMonth;
   const monthlyTasksRemaining = tasksLimit == null
     ? null
@@ -58,10 +64,11 @@ export function getRemaining(shop, plan, { now = new Date(), affectedVariants = 
   return {
     currentPlan: plan || 'free_preview',
     planCaps,
-    affectedVariantsInThisPreview: Number(affectedVariants || 0),
+    affectedVariantsInThisPreview,
     monthlyTasksUsed: usage.completedTasks,
     monthlyTasksRemaining,
-    affectedVariantsTotalThisMonth: usage.affectedVariantsTotal
+    affectedVariantsTotalThisMonth: usage.affectedVariantsTotal,
+    paywall: buildPaywall(paywallDecision, plan)
   };
 }
 
@@ -84,4 +91,26 @@ export function evaluateUsageLimit({ plan, affectedVariants, monthlyCompletedTas
   }
 
   return { allowed: true, kind: null, cap: null };
+}
+
+export function buildPaywall(decision, plan) {
+  if (decision.allowed) {
+    return {
+      kind: null,
+      shouldBlockApply: false,
+      suggestedPlan: null,
+      suggestedPlanPrice: null,
+      upgradeUrl: null
+    };
+  }
+
+  const suggestedPlan = plan === 'free_preview' ? 'standard' : 'pro';
+  const suggestedPlanPrice = suggestedPlan === 'standard' ? '$9.99' : '$24.99';
+  return {
+    kind: decision.kind,
+    shouldBlockApply: true,
+    suggestedPlan,
+    suggestedPlanPrice,
+    upgradeUrl: `/billing/upgrade?plan=${suggestedPlan}`
+  };
 }

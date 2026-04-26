@@ -250,3 +250,96 @@ tests 14
 pass 14
 fail 0
 ```
+
+## P1-4 Hard paywall
+
+Branch: `codex/p1-4-hard-paywall`
+PR: 未作成
+
+### 変更内容
+
+- `/api/simulate` の `usage` に `paywall` object を追加した。
+- `/api/apply` の直前で同じ usage limit 判定を行い、cap 超過時は `402` で block する。
+- `usage.js` に paywall object 生成を追加した。
+- UI では preview 結果表示後、Apply ボタン直上に hard paywall を表示する。
+- paywall 表示時は Apply ボタンを disabled にする。
+- upgrade CTA は `/billing/upgrade?plan=...&shop=...` に遷移する。
+- `/billing/upgrade` は Shopify hosted Managed Pricing page に redirect する。
+- paywall 表示と upgrade click は `/api/events` 経由で記録する。
+
+### API 追加 field
+
+`/api/simulate` の既存 field は維持し、`usage.paywall` を追加する。
+
+```json
+{
+  "usage": {
+    "currentPlan": "free_preview",
+    "planCaps": {
+      "variantsPerTask": 100,
+      "tasksPerMonth": 3
+    },
+    "affectedVariantsInThisPreview": 3,
+    "monthlyTasksUsed": 3,
+    "monthlyTasksRemaining": 0,
+    "affectedVariantsTotalThisMonth": 3,
+    "paywall": {
+      "kind": "tasks_over_cap",
+      "shouldBlockApply": true,
+      "suggestedPlan": "standard",
+      "suggestedPlanPrice": "$9.99",
+      "upgradeUrl": "/billing/upgrade?plan=standard"
+    }
+  }
+}
+```
+
+`/api/apply` の cap 超過時 response:
+
+```json
+{
+  "error": "paywall",
+  "usage": {},
+  "paywall": {}
+}
+```
+
+### 表示ルール
+
+- 表示する場所: preview 結果表示後、Apply ボタン直上。
+- 表示しない場所: install 直後、rule builder の入口、product picker の前、task 失敗直後。
+- preview が paywall 対象外になったら paywall を非表示にし、Apply を再度有効化する。
+
+### Shopify hosted page
+
+`/billing/upgrade` は次の形式に redirect する。
+
+```text
+https://admin.shopify.com/store/:store_handle/charges/:app_handle/pricing_plans
+```
+
+`SHOPIFY_APP_HANDLE` は `.env.example` に追加済み。現在の default は `bulk-update-products`。
+
+### Acceptance Status
+
+- [x] free_preview で月内3回 apply 後の4回目は paywall 表示対象になる。
+- [x] apply 直前でも同じ条件で `402` block する。
+- [x] standard の `5,000` / `5,001` variants 境界は usage unit test で確認済み。
+- [x] free_preview の `100` / `101` variants 境界は usage unit test で確認済み。
+- [x] paywall 表示時に `paywall_shown` event を送る UI hook を追加した。
+- [x] upgrade CTA click で `paywall_clicked_upgrade` event を送る UI hook を追加した。
+- [x] upgrade CTA は Shopify hosted Managed Pricing page に redirect する。
+
+### Verification
+
+```bash
+npm test
+```
+
+Result:
+
+```text
+tests 16
+pass 16
+fail 0
+```

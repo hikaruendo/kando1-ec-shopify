@@ -12,7 +12,7 @@ import { deleteJobsByShop, createJob, completeJob, getJobWithSnapshots, incremen
 import { initializeDb } from './db/index.js';
 import { deleteShopSessionsByShop, getShopSession, saveShopSession } from './db/sessions-repo.js';
 import { deleteUsageByShop } from './db/usage-repo.js';
-import { getRemaining, incrementUsage } from './usage.js';
+import { evaluateUsageLimit, getRemaining, getUsage, incrementUsage } from './usage.js';
 import {
   buildInstallUrl,
   getBearerToken,
@@ -34,7 +34,8 @@ function readConfig() {
     SHOPIFY_API_SECRET,
     SHOPIFY_SCOPES = 'read_products,write_products',
     SHOPIFY_SHOP_DOMAIN,
-    SHOPIFY_ADMIN_ACCESS_TOKEN
+    SHOPIFY_ADMIN_ACCESS_TOKEN,
+    SHOPIFY_APP_HANDLE = 'bulk-update-products'
   } = process.env;
 
   const port = Number(PORT);
@@ -49,7 +50,8 @@ function readConfig() {
     SHOPIFY_API_SECRET,
     SHOPIFY_SCOPES,
     SHOPIFY_SHOP_DOMAIN,
-    SHOPIFY_ADMIN_ACCESS_TOKEN
+    SHOPIFY_ADMIN_ACCESS_TOKEN,
+    SHOPIFY_APP_HANDLE
   };
 }
 
@@ -399,6 +401,15 @@ export async function createApp({ logger = console, sqlitePath, analytics = null
     }
   });
 
+  app.get('/billing/upgrade', (req, res) => {
+    const shop = normalizeShop(req.query.shop || config.SHOPIFY_SHOP_DOMAIN);
+    if (!shop) return res.status(400).json({ error: 'shop is required' });
+    if (!config.SHOPIFY_APP_HANDLE) return res.status(500).json({ error: 'SHOPIFY_APP_HANDLE is required' });
+
+    const storeHandle = shop.replace(/\.myshopify\.com$/i, '');
+    return res.redirect(`https://admin.shopify.com/store/${storeHandle}/charges/${config.SHOPIFY_APP_HANDLE}/pricing_plans`);
+  });
+
   app.post('/api/simulate', async (req, res) => {
     try {
       const { productId, rules = [] } = req.body || {};
@@ -440,6 +451,22 @@ export async function createApp({ logger = console, sqlitePath, analytics = null
       const sim = simulate(variants, rules);
       const changed = sim.diffs.filter(d => d.changed);
       const eventShop = getEventShop(req, shopContext);
+      const usage = eventShop ? getUsage(eventShop) : { completedTasks: 0 };
+      const usageLimit = evaluateUsageLimit({
+        plan: req.currentPlan,
+        affectedVariants: changed.length,
+        monthlyCompletedTasks: usage.completedTasks
+      });
+      if (!usageLimit.allowed) {
+        const usageInfo = getRemaining(eventShop, req.currentPlan, {
+          affectedVariants: changed.length
+        });
+        return res.status(402).json({
+          error: 'paywall',
+          usage: usageInfo,
+          paywall: usageInfo.paywall
+        });
+      }
       await trackEvent('apply_started', {
         shop: eventShop,
         payload: { affected_variants: changed.length }
