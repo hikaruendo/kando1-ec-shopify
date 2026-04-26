@@ -551,7 +551,7 @@ Shopify CLI の webhook testing は、Partner Dashboard / Shopify CLI の対象 
 ## P1-8 Review prompt trigger
 
 Branch: `codex/p1-8-review-prompt`
-PR: 未作成
+PR: `#13`
 
 ### 変更内容
 
