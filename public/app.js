@@ -19,6 +19,14 @@ const softPaywallTitleEl = document.getElementById('softPaywallTitle');
 const softPaywallBodyEl = document.getElementById('softPaywallBody');
 const softPaywallUpgradeEl = document.getElementById('softPaywallUpgrade');
 const softPaywallCloseBtn = document.getElementById('softPaywallClose');
+const usageMeterEl = document.getElementById('usageMeter');
+const usagePlanEl = document.getElementById('usagePlan');
+const usageHeadlineEl = document.getElementById('usageHeadline');
+const usageTasksLabelEl = document.getElementById('usageTasksLabel');
+const usageTasksBarEl = document.getElementById('usageTasksBar');
+const usageVariantsLabelEl = document.getElementById('usageVariantsLabel');
+const usageVariantsBarEl = document.getElementById('usageVariantsBar');
+const usageUpgradeEl = document.getElementById('usageUpgrade');
 
 let valueCandidatesCache = null;
 
@@ -99,7 +107,13 @@ const I18N = {
     softPaywallBody: 'Upgrade to Pro ($24.99/mo) to use {feature}. This preview is here to measure demand before the feature ships.',
     scheduleFeature: 'Schedule',
     templateFeature: 'Saved templates',
-    historyFeature: 'Older history'
+    historyFeature: 'Older history',
+    usageRemaining: 'This month: {tasks} tasks left / {variants} variants per run',
+    usageUnlimitedTasks: 'This month: unlimited tasks / {variants} variants per run',
+    usageTasksLabel: 'Tasks used: {used} / {limit}',
+    usageTasksUnlimitedLabel: 'Tasks used: {used} / unlimited',
+    usageVariantsLabel: 'Per-run variant cap: {limit}',
+    usageLoadFailed: 'Usage meter unavailable'
   },
   ja: {
     appTitle: '一括価格ルールビルダー',
@@ -174,7 +188,13 @@ const I18N = {
     softPaywallBody: 'Pro（$24.99/mo）にアップグレードすると {feature} を利用できます。この入口は機能公開前の需要計測も兼ねています。',
     scheduleFeature: 'スケジュール',
     templateFeature: 'テンプレート保存',
-    historyFeature: '過去履歴'
+    historyFeature: '過去履歴',
+    usageRemaining: '今月 残り {tasks} tasks / {variants} variants',
+    usageUnlimitedTasks: '今月 tasks 無制限 / {variants} variants',
+    usageTasksLabel: 'Tasks 使用: {used} / {limit}',
+    usageTasksUnlimitedLabel: 'Tasks 使用: {used} / 無制限',
+    usageVariantsLabel: '1回あたり上限: {limit} variants',
+    usageLoadFailed: '使用量を取得できません'
   }
 };
 
@@ -678,6 +698,54 @@ function buildUpgradeUrl(plan = 'pro') {
   return url.toString();
 }
 
+function formatRemainingTasks(usage) {
+  return usage.monthlyTasksRemaining == null ? 'unlimited' : usage.monthlyTasksRemaining;
+}
+
+function setBar(el, percent) {
+  el.style.width = `${Math.max(0, Math.min(100, percent))}%`;
+}
+
+function renderUsageMeter(usage) {
+  usageMeterEl.classList.remove('hidden');
+  usagePlanEl.textContent = usage.currentPlan;
+  const variantsLimit = usage.planCaps.variantsPerTask;
+  usageHeadlineEl.textContent = usage.monthlyTasksRemaining == null
+    ? t('usageUnlimitedTasks', { variants: variantsLimit })
+    : t('usageRemaining', { tasks: formatRemainingTasks(usage), variants: variantsLimit });
+
+  if (usage.planCaps.tasksPerMonth == null) {
+    usageTasksLabelEl.textContent = t('usageTasksUnlimitedLabel', { used: usage.monthlyTasksUsed });
+    setBar(usageTasksBarEl, 0);
+  } else {
+    usageTasksLabelEl.textContent = t('usageTasksLabel', {
+      used: usage.monthlyTasksUsed,
+      limit: usage.planCaps.tasksPerMonth
+    });
+    setBar(usageTasksBarEl, (usage.monthlyTasksUsed / usage.planCaps.tasksPerMonth) * 100);
+  }
+
+  usageVariantsLabelEl.textContent = t('usageVariantsLabel', { limit: variantsLimit });
+  setBar(usageVariantsBarEl, 100);
+  usageUpgradeEl.href = buildUpgradeUrl(usage.currentPlan === 'free_preview' ? 'standard' : 'pro');
+}
+
+async function refreshUsageMeter() {
+  try {
+    const shop = getShop();
+    const qs = shop ? `?shop=${encodeURIComponent(shop)}` : '';
+    const res = await fetch(`/api/usage${qs}`, {
+      headers: await buildApiHeaders()
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data?.error || 'usage request failed');
+    renderUsageMeter(data.usage);
+  } catch {
+    usagePlanEl.textContent = t('usageLoadFailed');
+    usageHeadlineEl.textContent = '';
+  }
+}
+
 function showSoftPaywall({ featureKey, paywallKind }) {
   const feature = t(featureKey);
   softPaywallTitleEl.textContent = t('softPaywallTitle', { feature });
@@ -728,6 +796,7 @@ pickProductBtn.onclick = async () => {
 shopEl.oninput = () => {
   valueCandidatesCache = null;
   refreshShopStatus();
+  refreshUsageMeter();
 };
 connectShopBtn.onclick = () => {
   const shop = getShop();
@@ -773,6 +842,7 @@ document.getElementById('apply').onclick = async () => {
     const firstError = data.firstError ? `, firstError=${escapeHtml(data.firstError)}` : '';
     hidePaywall();
     summaryEl.innerHTML = `<b>${t('applyDoneLabel')}</b>: jobId=${data.jobId}, changed=${data.changedCount}, errors=${data.errorCount}${firstError}`;
+    refreshUsageMeter();
   } catch (e) {
     if (e.paywall) {
       renderPaywall(e.usage || { paywall: e.paywall });
@@ -806,4 +876,5 @@ addRule({
     summaryEl.innerHTML = `<b>${t('shopConnected')}</b>: ${t('oauthCompleted')}`;
   }
   refreshShopStatus();
+  refreshUsageMeter();
 })();

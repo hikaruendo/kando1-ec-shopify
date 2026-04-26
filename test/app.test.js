@@ -334,6 +334,44 @@ test('billing upgrade redirects to Shopify hosted managed pricing page', async (
   }
 });
 
+test('usage endpoint returns current plan usage for app home widget', async () => {
+  const db = await createTempDb();
+  const previousPlan = process.env.MOCK_CURRENT_PLAN;
+  try {
+    process.env.MOCK_CURRENT_PLAN = 'standard';
+    const createApp = await loadCreateApp();
+    const app = await createApp({ sqlitePath: db.sqlitePath });
+
+    incrementUsage('alpha-shop.myshopify.com', 7);
+    const response = await request(app)
+      .get('/api/usage')
+      .query({ shop: 'alpha-shop.myshopify.com' });
+
+    assert.equal(response.status, 200);
+    assert.deepStrictEqual(response.body, {
+      usage: {
+        currentPlan: 'standard',
+        planCaps: { variantsPerTask: 5000, tasksPerMonth: 20 },
+        affectedVariantsInThisPreview: 0,
+        monthlyTasksUsed: 1,
+        monthlyTasksRemaining: 19,
+        affectedVariantsTotalThisMonth: 7,
+        paywall: {
+          kind: null,
+          shouldBlockApply: false,
+          suggestedPlan: null,
+          suggestedPlanPrice: null,
+          upgradeUrl: null
+        }
+      }
+    });
+  } finally {
+    if (previousPlan === undefined) delete process.env.MOCK_CURRENT_PLAN;
+    else process.env.MOCK_CURRENT_PLAN = previousPlan;
+    await db.cleanup();
+  }
+});
+
 test('paywall event endpoint persists only whitelisted billing events', async () => {
   const db = await createTempDb();
   try {

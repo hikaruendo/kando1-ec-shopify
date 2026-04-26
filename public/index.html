@@ -12,6 +12,24 @@
     <main class="wrap">
       <h1 data-i18n="appTitle">Bulk Pricing Rule Builder</h1>
 
+      <section class="usageMeter card" id="usageMeter" aria-live="polite">
+        <div>
+          <div class="usagePlan" id="usagePlan">Plan</div>
+          <div class="usageHeadline" id="usageHeadline"></div>
+        </div>
+        <div class="usageBars">
+          <div>
+            <div class="usageBarLabel" id="usageTasksLabel"></div>
+            <div class="usageBar"><span id="usageTasksBar"></span></div>
+          </div>
+          <div>
+            <div class="usageBarLabel" id="usageVariantsLabel"></div>
+            <div class="usageBar"><span id="usageVariantsBar"></span></div>
+          </div>
+        </div>
+        <a id="usageUpgrade" class="usageUpgrade" href="/billing/upgrade?plan=standard" data-i18n="upgradeButton">Upgrade</a>
+      </section>
+
       <section class="card">
         <div id="shopSection" class="hidden">
           <label data-i18n="shopDomainLabel">Shop Domain</label>

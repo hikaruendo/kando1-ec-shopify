@@ -10,6 +10,14 @@ test('soft paywall UI exposes Pro feature entry points and tracking kinds', asyn
   ]);
 
   for (const id of [
+    'usageMeter',
+    'usagePlan',
+    'usageHeadline',
+    'usageTasksLabel',
+    'usageTasksBar',
+    'usageVariantsLabel',
+    'usageVariantsBar',
+    'usageUpgrade',
     'scheduleToggle',
     'saveTemplate',
     'olderHistory',
@@ -30,6 +38,15 @@ test('soft paywall UI exposes Pro feature entry points and tracking kinds', asyn
     assert.match(js, new RegExp(`${key}:`));
   }
 
+  for (const key of [
+    'usageRemaining',
+    'usageTasksLabel',
+    'usageVariantsLabel',
+    'usageLoadFailed'
+  ]) {
+    assert.match(js, new RegExp(`${key}:`));
+  }
+
   for (const kind of [
     'schedule_pro_required',
     'template_pro_required',
@@ -40,5 +57,7 @@ test('soft paywall UI exposes Pro feature entry points and tracking kinds', asyn
 
   assert.match(js, /paywall_clicked_upgrade/);
   assert.match(js, /buildUpgradeUrl\('pro'\)/);
+  assert.match(js, /refreshUsageMeter/);
+  assert.match(css, /\.usageMeter/);
   assert.match(css, /\.modalBackdrop/);
 });
