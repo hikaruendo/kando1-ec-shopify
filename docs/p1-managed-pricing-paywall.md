@@ -254,7 +254,7 @@ fail 0
 ## P1-4 Hard paywall
 
 Branch: `codex/p1-4-hard-paywall`
-PR: 未作成
+PR: `#10`
 
 ### 変更内容
 
