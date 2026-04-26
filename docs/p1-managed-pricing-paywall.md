@@ -167,12 +167,86 @@ fail 0
 
 ## P1-3 Usage metering
 
-Status: not started.
+Branch: `codex/p1-3-usage-metering`
+PR: 未作成
 
-次に実装する内容:
+### 変更内容
 
 - `usage_monthly` migration を追加する。
 - `src/usage.js` と usage repository を追加する。
-- apply 成功時に usage を increment する。
+- apply 成功時に usage を increment する。失敗した task は使用量に加算しない。
 - `/api/simulate` で upcoming usage を返す。
+- uninstall / shop redact cleanup で対象 shop の usage を削除する。
 - `limit` ちょうど / `limit + 1` の boundary test を追加する。
+
+### データモデル
+
+追加テーブル:
+
+- `usage_monthly`
+
+主キー:
+
+- `shop`
+- `year_month`
+
+保持する値:
+
+- `completed_tasks`
+- `affected_variants_total`
+
+月次 reset は UTC の `YYYY-MM` で行う。月初に全行を更新するのではなく、当月キーを変えることで自然に reset する。
+
+### Plan caps
+
+P1-3 時点の plan cap:
+
+- `free_preview`: `100 variants/task`, `3 tasks/month`
+- `standard`: `5,000 variants/task`, `20 tasks/month`
+- `founding_10`: `5,000 variants/task`, `20 tasks/month`
+- `pro`: `50,000 variants/task`, monthly task は unlimited
+- `scale`: `250,000 variants/task`, monthly task は unlimited
+
+### `/api/simulate` の追加 field
+
+既存 response shape は維持し、top-level に `usage` を追加する。
+
+```json
+{
+  "summary": {},
+  "diffs": [],
+  "usage": {
+    "currentPlan": "free_preview",
+    "planCaps": {
+      "variantsPerTask": 100,
+      "tasksPerMonth": 3
+    },
+    "affectedVariantsInThisPreview": 3,
+    "monthlyTasksUsed": 1,
+    "monthlyTasksRemaining": 2,
+    "affectedVariantsTotalThisMonth": 3
+  }
+}
+```
+
+### Acceptance Status
+
+- [x] 月初 reset は UTC `YYYY-MM` key で実装した。
+- [x] apply 成功時に `completed_tasks` と `affected_variants_total` を increment する。
+- [x] `/api/simulate` で upcoming usage を返す。
+- [x] usage は uninstall / shop redact cleanup 対象に含めた。
+- [x] boundary test で `limit` ちょうど / `limit + 1` を確認した。
+
+### Verification
+
+```bash
+npm test
+```
+
+Result:
+
+```text
+tests 14
+pass 14
+fail 0
+```

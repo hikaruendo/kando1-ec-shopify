@@ -5,6 +5,7 @@ import { closeAllDbs } from '../src/db/index.js';
 import { listCriticalEvents, recordCriticalEvent } from '../src/db/events-repo.js';
 import { createJob, getJobWithSnapshots } from '../src/db/jobs-repo.js';
 import { getShopSession, saveShopSession } from '../src/db/sessions-repo.js';
+import { getUsage } from '../src/usage.js';
 import { createTempDb, loadCreateApp, signWebhookPayload } from './helpers.js';
 
 test('apply -> restart -> get/undo preserves API shape and shop isolation', async () => {
@@ -35,6 +36,8 @@ test('apply -> restart -> get/undo preserves API shape and shop isolation', asyn
       errorCount: 0,
       firstError: null
     });
+    assert.equal(getUsage('alpha-shop.myshopify.com').completedTasks, 1);
+    assert.equal(getUsage('alpha-shop.myshopify.com').affectedVariantsTotal, 3);
     assert.deepStrictEqual(listCriticalEvents({
       shop: 'alpha-shop.myshopify.com',
       name: 'apply_succeeded'
@@ -163,6 +166,7 @@ test('webhooks reject invalid signatures and clean up persisted shop data withou
     assert.equal(redact.status, 200);
     assert.equal(getShopSession('alpha-shop.myshopify.com'), null);
     assert.equal(getJobWithSnapshots('job_000001'), null);
+    assert.equal(getUsage('alpha-shop.myshopify.com').completedTasks, 0);
     assert.deepStrictEqual(listCriticalEvents({ shop: 'alpha-shop.myshopify.com' }), []);
     assert.equal(logs.some(entry => entry.includes('customer@example.com')), false);
 
@@ -193,6 +197,62 @@ test('webhooks reject invalid signatures and clean up persisted shop data withou
     assert.equal(getShopSession('beta-shop.myshopify.com'), null);
     assert.equal(getJobWithSnapshots('job_000002'), null);
   } finally {
+    await db.cleanup();
+  }
+});
+
+test('simulate response includes upcoming usage without changing existing preview fields', async () => {
+  const db = await createTempDb();
+  const previousPlan = process.env.MOCK_CURRENT_PLAN;
+  try {
+    process.env.MOCK_CURRENT_PLAN = 'free_preview';
+    const createApp = await loadCreateApp();
+    const app = await createApp({ sqlitePath: db.sqlitePath });
+
+    const applyResponse = await request(app)
+      .post('/api/apply')
+      .send({
+        shop: 'alpha-shop.myshopify.com',
+        productId: 'gid://shopify/Product/123',
+        rules: [
+          {
+            priority: 1,
+            conditions: [{ field: 'option2', op: 'equals', value: 'Pro' }],
+            action: { type: 'add', value: 100 }
+          }
+        ]
+      });
+    assert.equal(applyResponse.status, 200);
+
+    const simulateResponse = await request(app)
+      .post('/api/simulate')
+      .send({
+        shop: 'alpha-shop.myshopify.com',
+        productId: 'gid://shopify/Product/123',
+        rules: [
+          {
+            priority: 1,
+            conditions: [{ field: 'option2', op: 'equals', value: 'Pro' }],
+            action: { type: 'add', value: 100 }
+          }
+        ]
+      });
+
+    assert.equal(simulateResponse.status, 200);
+    assert.equal(simulateResponse.body.summary.totalVariants, 5);
+    assert.equal(simulateResponse.body.summary.changedVariants, 3);
+    assert.equal(Array.isArray(simulateResponse.body.diffs), true);
+    assert.deepStrictEqual(simulateResponse.body.usage, {
+      currentPlan: 'free_preview',
+      planCaps: { variantsPerTask: 100, tasksPerMonth: 3 },
+      affectedVariantsInThisPreview: 3,
+      monthlyTasksUsed: 1,
+      monthlyTasksRemaining: 2,
+      affectedVariantsTotalThisMonth: 3
+    });
+  } finally {
+    if (previousPlan === undefined) delete process.env.MOCK_CURRENT_PLAN;
+    else process.env.MOCK_CURRENT_PLAN = previousPlan;
     await db.cleanup();
   }
 });
