@@ -401,6 +401,23 @@ export async function createApp({ logger = console, sqlitePath, analytics = null
     }
   });
 
+  app.get('/api/usage', async (req, res) => {
+    try {
+      const shopContext = await resolveShopContext(req);
+      if (shopContext.error) return res.status(shopContext.error.status).json(shopContext.error.body);
+      const shop = getEventShop(req, shopContext);
+      const currentPlan = await getCurrentPlan(shop, {
+        accessToken: shopContext.accessToken,
+        logger
+      });
+      return res.json({
+        usage: getRemaining(shop, currentPlan)
+      });
+    } catch (e) {
+      return res.status(500).json({ error: String(e) });
+    }
+  });
+
   app.get('/billing/upgrade', (req, res) => {
     const shop = normalizeShop(req.query.shop || config.SHOPIFY_SHOP_DOMAIN);
     if (!shop) return res.status(400).json({ error: 'shop is required' });

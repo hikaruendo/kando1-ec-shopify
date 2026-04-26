@@ -347,7 +347,7 @@ fail 0
 ## P1-5 Soft paywall
 
 Branch: `codex/p1-5-soft-paywall`
-PR: 未作成
+PR: `#11`
 
 ### 変更内容
 
@@ -390,5 +390,69 @@ Result:
 ```text
 tests 17
 pass 17
+fail 0
+```
+
+## P1-6 Usage meter widget
+
+Branch: `codex/p1-6-usage-meter`
+PR: 未作成
+
+### 変更内容
+
+- app home 上部に usage meter widget を追加した。
+- `/api/usage` endpoint を追加した。
+- app 起動時に usage を取得し、現在 plan と今月の残量を表示する。
+- Apply 成功後に usage meter を再取得する。
+- tasks と variants の progress bar を追加した。
+- upgrade CTA は current plan に応じて Standard / Pro へ向ける。
+- mobile では widget を1カラムに落として横はみ出しを避ける。
+- UI 文言は JA/EN の i18n に追加した。
+
+### `/api/usage` response
+
+```json
+{
+  "usage": {
+    "currentPlan": "standard",
+    "planCaps": {
+      "variantsPerTask": 5000,
+      "tasksPerMonth": 20
+    },
+    "affectedVariantsInThisPreview": 0,
+    "monthlyTasksUsed": 1,
+    "monthlyTasksRemaining": 19,
+    "affectedVariantsTotalThisMonth": 7,
+    "paywall": {
+      "kind": null,
+      "shouldBlockApply": false,
+      "suggestedPlan": null,
+      "suggestedPlanPrice": null,
+      "upgradeUrl": null
+    }
+  }
+}
+```
+
+### Acceptance Status
+
+- [x] `/api/usage` endpoint を追加した。
+- [x] app 起動時に usage meter を読み込む。
+- [x] Apply 成功後に usage meter を更新する。
+- [x] 現在 plan、残り tasks、variants cap を表示する。
+- [x] progress bar 2本を表示する。
+- [x] mobile で1カラム表示にする。
+
+### Verification
+
+```bash
+npm test
+```
+
+Result:
+
+```text
+tests 18
+pass 18
 fail 0
 ```
