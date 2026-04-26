@@ -56,6 +56,9 @@ test('soft paywall UI exposes Pro feature entry points and tracking kinds', asyn
   }
 
   assert.match(js, /paywall_clicked_upgrade/);
+  assert.match(js, /shopify\.reviews\.request/);
+  assert.match(js, /review_prompt_shown/);
+  assert.match(js, /review_prompt_dismissed/);
   assert.match(js, /buildUpgradeUrl\('pro'\)/);
   assert.match(js, /refreshUsageMeter/);
   assert.match(css, /\.usageMeter/);

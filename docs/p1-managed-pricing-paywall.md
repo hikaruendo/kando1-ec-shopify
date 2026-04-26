@@ -547,3 +547,65 @@ npm test
 ```
 
 Shopify CLI の webhook testing は、Partner Dashboard / Shopify CLI の対象 app config が本番 app と一致している状態で実施する。
+
+## P1-8 Review prompt trigger
+
+Branch: `codex/p1-8-review-prompt`
+PR: `#13`
+
+### 変更内容
+
+- App Bridge Reviews API の `shopify.reviews.request()` を使う frontend hook を追加した。
+- 2回目の `apply_succeeded` 後だけ review prompt 候補にする。
+- `undo_succeeded` 後は review prompt 候補にする。
+- `apply_failed` 直後は出さない。
+- 同 shop に 30日以内に複数回出さない。
+- `review_prompt_shown` / `review_prompt_dismissed` を critical event として保存する。
+- Reviews API が使えない環境では何もしない。
+
+### Shopify docs 確認
+
+Reviews API は App Bridge の `reviews.request()` で review modal を要求する。表示可否は Shopify 側の rate limit / eligibility に従う。
+
+Shopify 側の制限:
+
+- 60日以内に1回まで。
+- 365日以内に3回まで。
+- 既に review 済み、mobile、merchant ineligible、install 24時間未満などでは表示されない。
+
+参照:
+
+- https://shopify.dev/docs/api/app-home/apis/user-interface-and-interactions/reviews-api
+- https://shopify.dev/changelog/request-app-reviews-in-admin-with-the-new-reviews-api
+
+### Trigger 条件
+
+- 初回 apply: 表示しない。
+- 2回目の successful apply: 表示候補。
+- 3回目以降の apply: 表示しない。
+- undo success: 表示候補。
+- 30日以内に `review_prompt_shown` がある shop: 表示しない。
+- task 失敗直後: 表示しない。
+
+### Acceptance Status
+
+- [x] 初回 apply では出ない。
+- [x] 2回目 apply で `reviewPrompt.shouldShow=true` を返す。
+- [x] undo success で `reviewPrompt.shouldShow=true` を返す。
+- [x] 30日以内の再表示を suppress する。
+- [x] task failure trigger は対象外。
+- [x] App Bridge Reviews API hook を frontend に追加した。
+
+### Verification
+
+```bash
+npm test
+```
+
+Result:
+
+```text
+tests 23
+pass 23
+fail 0
+```

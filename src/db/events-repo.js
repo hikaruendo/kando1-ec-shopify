@@ -86,6 +86,28 @@ export function getDistinctShopsByEventName(name) {
   `).all(name).map(row => row.shop);
 }
 
+export function countCriticalEvents({ shop, name, since = null } = {}) {
+  const db = getDb();
+  const clauses = [];
+  const params = [];
+  if (shop) {
+    clauses.push('shop = ?');
+    params.push(shop);
+  }
+  if (name) {
+    clauses.push('name = ?');
+    params.push(name);
+  }
+  if (since != null) {
+    clauses.push('created_at >= ?');
+    params.push(Number(since));
+  }
+
+  const where = clauses.length ? `WHERE ${clauses.join(' AND ')}` : '';
+  const row = db.prepare(`SELECT COUNT(*) AS count FROM events ${where}`).get(...params);
+  return Number(row?.count || 0);
+}
+
 export function deleteCriticalEventsByShop(shop) {
   if (!shop) return;
   const db = getDb();
