@@ -347,7 +347,7 @@ fail 0
 ## P1-5 Soft paywall
 
 Branch: `codex/p1-5-soft-paywall`
-PR: 未作成
+PR: `#11`
 
 ### 変更内容
 
