@@ -195,10 +195,11 @@ curl -X POST http://localhost:8787/api/simulate \
 
 ## App Listing 下書き
 
-Shopify の App Store requirements では、埋め込みアプリは session token を使うこと、課金がある場合は Shopify Billing API か Managed Pricing を使うこと、listing は正確であることが求められる。
+最新の listing copy は [docs/listing-copy.md](docs/listing-copy.md) を source of truth とする。Shopify の App Store requirements では、埋め込みアプリは session token を使うこと、課金がある場合は Shopify Billing API か Managed Pricing を使うこと、listing は正確であることが求められる。
 参照:
 - [App Store requirements](https://shopify.dev/docs/apps/launch/shopify-app-store/app-store-requirements)
 - [Submit your app for review](https://shopify.dev/docs/apps/launch/app-store-review/submit-app-for-review)
+- [Best practices for apps in the Shopify App Store](https://shopify.dev/docs/apps/launch/shopify-app-store/best-practices)
 
 ### 基本情報
 - App name:
@@ -214,39 +215,44 @@ Shopify の App Store requirements では、埋め込みアプリは session tok
   - Support: `https://kando1-bulk-pricing.fly.dev/support.html`
 
 ### 英語 listing 文案
-- One-line summary:
-  - `Bulk update variant prices by combining multiple option values in a single rule.`
-- Short description:
-  - `Preview and apply bulk price changes for variants filtered by multiple option values such as color groups and grades.`
-- Full description:
-  - `Bulk Pricing Rule Builder helps merchants update variant prices faster when products have many option combinations.`
-  - `Instead of editing each SKU one by one, merchants can define rules such as "Option 1 is any of Black1 to Black5" and "Option 2 equals Standard", preview the affected variants, and then apply the update in one action.`
-  - `The app is designed for products with large variant matrices where Shopify's native bulk editing flow is too slow for repeated price operations.`
+- App introduction:
+  - `Bulk-edit variant prices across size/color combinations with preview and safe rollback.`
+- App details:
+  - `Update variant prices across size, color, and other option combinations without editing each variant one by one. Kando1 Variant Bulk Editor lets you build rules, preview the exact variants that will change, and apply only the differences.`
+  - `Use it when a product has many variants and you need a controlled way to adjust prices for selected combinations. Each run keeps a job history so recent changes can be reviewed and rolled back when needed.`
 - Key benefits:
-  - `Filter variants by multiple option values in one rule`
-  - `Preview every affected variant before applying changes`
-  - `Update only changed variants`
-  - `Undo the most recent pricing job`
-- Suggested feature bullets:
-  - `Multi-value filtering for option1, option2, and title`
-  - `Add, set, or multiply prices`
-  - `Embedded admin experience with product picker`
-  - `Japanese and English UI support`
+  - `Save time on repeated variant price updates across option combinations.`
+  - `Preview affected variants before committing a bulk change.`
+  - `Reduce accidental edits by updating only variants that match your rules.`
+  - `Roll back retained jobs when a price change needs to be restored.`
+- Screenshot captions:
+  - `Build a rule with size, color, title, and other variant conditions.`
+  - `Preview every affected variant before applying a price change.`
+  - `Apply only changed variants and review the completed job summary.`
+  - `Track usage and job history from the embedded app home.`
 
 ### 日本語 listing 文案
-- One-line summary:
-  - `複数のバリアント条件を組み合わせて、価格を一括更新できるアプリ`
-- Short description:
-  - `色グループやグレードなど複数のオプション値でバリアントを絞り込み、価格変更をプレビューして一括反映できます。`
-- Full description:
-  - `Bulk Pricing Rule Builder は、バリアント数が多い商品の価格更新を効率化するためのアプリです。`
-  - `SKU を1件ずつ手作業で編集する代わりに、たとえば「Option 1 が Black1 から Black5 のいずれか」「Option 2 が Standard」といった条件を作成し、対象バリアントをプレビューしたうえで一括反映できます。`
-  - `Shopify 標準の一括編集では扱いづらい、複数条件を組み合わせた価格更新に向いています。`
+- App introduction:
+  - `サイズ・カラーなど複数条件でバリアント価格を一括更新。プレビュー付きで安全に実行。`
+- App details:
+  - `サイズ、カラー、その他のオプション条件を組み合わせて、バリアント価格をまとめて更新できます。Kando1 Variant Bulk Editor では、ルールを作成し、変更対象のバリアントを事前に確認してから、差分だけを反映できます。`
+  - `多くのバリアントを持つ商品の価格調整を、手作業ではなく管理された手順で進めたい場合に使えます。各実行はジョブ履歴として残り、必要に応じて保持中の変更を確認・復元できます。`
 - Key benefits:
-  - `複数のオプション値を 1 つのルールで指定可能`
-  - `反映前に対象バリアントを一覧で確認可能`
-  - `変更が必要なバリアントだけを更新`
-  - `直前の価格更新ジョブを取り消し可能`
+  - `オプション条件をまたいだバリアント価格更新の手間を減らせます。`
+  - `一括反映前に、変更対象のバリアントを確認できます。`
+  - `ルールに一致したバリアントだけを更新し、意図しない編集を減らせます。`
+  - `保持中のジョブ履歴から、必要な価格変更を復元できます。`
+- Screenshot captions:
+  - `サイズ、カラー、タイトルなどの条件を組み合わせてルールを作成。`
+  - `価格変更を反映する前に、対象バリアントを一覧で確認。`
+  - `差分だけを反映し、完了したジョブの結果を確認。`
+  - `埋め込みアプリのホームで usage とジョブ履歴を確認。`
+
+### 画像と copy の禁止事項
+- pricing 情報は `Pricing details` のみに記載し、screenshot や app details には入れない。
+- reviews、testimonials、rating を listing copy や screenshot に入れない。
+- statistics、保証、誇大な outcome claim は入れない。
+- screenshot は実際の app UI を中心にし、browser chrome、desktop background、個人情報を含めない。
 
 ### カテゴリ候補
 - Primary category:
@@ -265,7 +271,7 @@ Shopify の App Store requirements では、埋め込みアプリは session tok
   - `Click Apply and confirm errors=0`
 - Notes for reviewer:
   - `The app is embedded and should be opened from Shopify Admin.`
-  - `Billing is not implemented yet in this branch and should not be described in the listing.`
+  - `Billing uses Shopify Managed Pricing. Pricing copy must stay in Pricing details only.`
 
 ## 2026-03-15 時点の差分
 

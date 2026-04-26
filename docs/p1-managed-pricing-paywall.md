@@ -609,3 +609,55 @@ tests 23
 pass 23
 fail 0
 ```
+
+## P1-9 Listing copy rewrite
+
+Branch: `codex/p1-9-listing-copy`
+PR: `#14`
+
+### 変更内容
+
+- [listing-copy.md](listing-copy.md) を新設し、Shopify App Store listing copy の source of truth にした。
+- EN / JA の app introduction、app details、key benefits、screenshot captions を outcome ベースに更新した。
+- README の `App Listing 下書き` セクションを最新 copy と `docs/listing-copy.md` 参照に差し替えた。
+- pricing、reviews、誇大な outcome claim を screenshot / listing 本文に入れない運用ルールを明記した。
+
+### Shopify docs 確認
+
+Shopify docs で App Store listing requirements と best practices を確認した。
+
+確認した制約:
+
+- pricing 情報は指定された Pricing details 以外に入れない。
+- reviews / testimonials を listing 本文や画像に入れない。
+- statistics、保証、誇大な outcome claim を入れない。
+- screenshots は実際の app UI / features を中心にし、browser chrome や desktop background を含めない。
+- screenshots は重複させず、異なる feature / view / state を示す。
+
+参照:
+
+- https://shopify.dev/docs/apps/launch/shopify-app-store/app-store-requirements
+- https://shopify.dev/docs/apps/launch/shopify-app-store/best-practices
+
+### Acceptance Status
+
+- [x] `docs/listing-copy.md` に JA / EN の全セクションを追加した。
+- [x] EN intro は指定文言を使用した。
+- [x] JA intro は指定文言を使用した。
+- [x] details 先頭2文相当、key benefits 4件、screenshots captions 4件を JA / EN で揃えた。
+- [x] pricing / reviews / 誇大な outcome を screenshot に入れない原則を明記した。
+- [x] README の `App Listing 下書き` セクションを更新した。
+
+### Verification
+
+```bash
+npm test
+```
+
+Result:
+
+```text
+tests 23
+pass 23
+fail 0
+```
