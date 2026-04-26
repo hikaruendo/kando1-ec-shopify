@@ -181,6 +181,13 @@ test('webhooks reject invalid signatures and clean up persisted shop data withou
       productId: 'gid://shopify/Product/123',
       snapshots: [{ variantId: 'v4', beforePrice: 1300, afterPrice: 1400 }]
     });
+    recordCriticalEvent({
+      id: 'event-2',
+      shop: 'beta-shop.myshopify.com',
+      name: 'paywall_shown',
+      payload: { paywall_kind: 'variants_over_cap' }
+    });
+    incrementUsage('beta-shop.myshopify.com', 2);
 
     const uninstallPayload = JSON.stringify({
       id: 2,
@@ -196,6 +203,50 @@ test('webhooks reject invalid signatures and clean up persisted shop data withou
     assert.equal(uninstall.status, 200);
     assert.equal(getShopSession('beta-shop.myshopify.com'), null);
     assert.equal(getJobWithSnapshots('job_000002'), null);
+    assert.equal(getUsage('beta-shop.myshopify.com').completedTasks, 0);
+    assert.deepStrictEqual(listCriticalEvents({ shop: 'beta-shop.myshopify.com' }), []);
+  } finally {
+    await db.cleanup();
+  }
+});
+
+test('customer compliance webhooks are no-op 200 responses and do not log payload bodies', async () => {
+  const db = await createTempDb();
+  const logs = [];
+  try {
+    const createApp = await loadCreateApp();
+    const app = await createApp({
+      sqlitePath: db.sqlitePath,
+      logger: {
+        log: (...args) => logs.push(args.join(' '))
+      }
+    });
+
+    const payload = JSON.stringify({
+      shop_domain: 'alpha-shop.myshopify.com',
+      customer: {
+        id: 123,
+        email: 'private-customer@example.com',
+        phone: '+15555550123'
+      },
+      orders_requested: [1, 2, 3]
+    });
+
+    for (const topic of ['customers/data_request', 'customers/redact']) {
+      const response = await request(app)
+        .post('/webhooks')
+        .set('Content-Type', 'application/json')
+        .set('X-Shopify-Topic', topic)
+        .set('X-Shopify-Hmac-SHA256', signWebhookPayload(payload))
+        .send(payload);
+      assert.equal(response.status, 200);
+      assert.deepStrictEqual(response.body, { ok: true });
+    }
+
+    assert.equal(logs.some(entry => entry.includes('private-customer@example.com')), false);
+    assert.equal(logs.some(entry => entry.includes('+15555550123')), false);
+    assert.equal(logs.some(entry => entry.includes('customers/data_request')), true);
+    assert.equal(logs.some(entry => entry.includes('customers/redact')), true);
   } finally {
     await db.cleanup();
   }
