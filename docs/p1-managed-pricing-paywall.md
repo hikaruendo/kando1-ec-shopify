@@ -613,7 +613,7 @@ fail 0
 ## P1-9 Listing copy rewrite
 
 Branch: `codex/p1-9-listing-copy`
-PR: 未作成
+PR: `#14`
 
 ### 変更内容
 
