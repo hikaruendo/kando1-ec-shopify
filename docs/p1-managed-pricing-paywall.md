@@ -254,7 +254,7 @@ fail 0
 ## P1-4 Hard paywall
 
 Branch: `codex/p1-4-hard-paywall`
-PR: 未作成
+PR: `#10`
 
 ### 変更内容
 
@@ -341,5 +341,54 @@ Result:
 ```text
 tests 16
 pass 16
+fail 0
+```
+
+## P1-5 Soft paywall
+
+Branch: `codex/p1-5-soft-paywall`
+PR: 未作成
+
+### 変更内容
+
+- 未実装の Pro 機能入口として `Schedule` / `Save as template` / `Older history` ボタンを追加した。
+- 各ボタンのクリック時に soft paywall modal を表示する。
+- modal には Pro upgrade CTA と close ボタンを置く。
+- `paywall_shown` event を feature ごとの kind で記録する。
+- upgrade CTA click 時に `paywall_clicked_upgrade` event を記録する。
+- UI 文言は JA/EN の i18n に追加した。
+
+### event kind
+
+- schedule: `schedule_pro_required`
+- template: `template_pro_required`
+- history: `history_pro_required`
+
+### 表示ルール
+
+- schedule / template / older history の入口は常時表示する。
+- 実処理はまだ行わず、クリック時に Pro 案内だけを表示する。
+- この段階では需要計測が目的。P2 で実機能を追加する。
+
+### Acceptance Status
+
+- [x] schedule toggle クリック用の UI と soft paywall modal を追加した。
+- [x] save as template クリック用の UI と soft paywall modal を追加した。
+- [x] history の older access 入口と soft paywall modal を追加した。
+- [x] `paywall_shown` event hook を feature 別 kind で追加した。
+- [x] upgrade CTA click の `paywall_clicked_upgrade` hook を追加した。
+- [x] JA/EN i18n を追加した。
+
+### Verification
+
+```bash
+npm test
+```
+
+Result:
+
+```text
+tests 17
+pass 17
 fail 0
 ```

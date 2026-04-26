@@ -10,11 +10,13 @@ h2 { margin: 8px 0; font-size: 16px; }
 label { font-size: 13px; color: #555; }
 input, select, button { padding: 8px 10px; border-radius: 8px; border: 1px solid #d0d0d0; }
 button { cursor: pointer; }
+button.secondary { background: #fff; color: #222; border-color: #c9c9c9; }
 .hint { font-size: 12px; color: #666; margin: 6px 0 12px; }
 .warn { background: #111; color: #fff; }
 .row { display: flex; gap: 8px; align-items: center; margin: 8px 0; flex-wrap: wrap; }
 .row > * { min-width: 0; }
 .between { justify-content: space-between; }
+.featureActions { display: flex; gap: 8px; flex-wrap: wrap; margin: 8px 0 12px; }
 .rule { border: 1px solid #e6e6e6; border-radius: 10px; padding: 12px; margin-bottom: 10px; background: #fafafa; }
 .conditions { margin-bottom: 8px; }
 .condition { margin: 8px 0; }
@@ -73,6 +75,33 @@ button { cursor: pointer; }
   padding: 8px 10px;
   text-decoration: none;
 }
+.modalBackdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.45);
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  z-index: 20;
+}
+.modalBackdrop.hidden { display: none; }
+.modalCard {
+  width: min(440px, 100%);
+  background: #fff;
+  border-radius: 14px;
+  padding: 18px;
+  box-shadow: 0 18px 60px rgba(0, 0, 0, 0.22);
+}
+.modalCard h2 { font-size: 20px; margin: 0 0 8px; }
+.modalCard p { color: #444; line-height: 1.5; margin: 0 0 14px; }
+.modalPrimary {
+  display: inline-block;
+  background: #111;
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-decoration: none;
+}
 #result { overflow-x: auto; }
 
 @media (max-width: 760px) {
@@ -84,5 +113,6 @@ button { cursor: pointer; }
   .condition .field,
   .condition .op,
   .condition .value { flex: 1 1 100%; min-width: 0; }
+  .featureActions > button { flex: 1 1 100%; }
   .pickerList { grid-template-columns: 1fr; }
 }

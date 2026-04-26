@@ -11,6 +11,14 @@ const shopStatusEl = document.getElementById('shopStatus');
 const connectShopBtn = document.getElementById('connectShop');
 const shopSectionEl = document.getElementById('shopSection');
 const paywallEl = document.getElementById('paywall');
+const scheduleToggleBtn = document.getElementById('scheduleToggle');
+const saveTemplateBtn = document.getElementById('saveTemplate');
+const olderHistoryBtn = document.getElementById('olderHistory');
+const softPaywallModalEl = document.getElementById('softPaywallModal');
+const softPaywallTitleEl = document.getElementById('softPaywallTitle');
+const softPaywallBodyEl = document.getElementById('softPaywallBody');
+const softPaywallUpgradeEl = document.getElementById('softPaywallUpgrade');
+const softPaywallCloseBtn = document.getElementById('softPaywallClose');
 
 let valueCandidatesCache = null;
 
@@ -82,7 +90,16 @@ const I18N = {
     variantsOverCapCurrent: 'This preview affects {variants} variants. Your current plan is limited to {cap} variants/run. Upgrade to {plan} ({price}/mo) to apply this preview as-is.',
     tasksOverCap: 'You have used all {cap} free runs this month. Upgrade to Standard ($9.99/mo) to apply this preview.',
     tasksOverCapCurrent: 'You have used all {cap} runs this month. Upgrade to {plan} ({price}/mo) to apply this preview.',
-    upgradeButton: 'Upgrade'
+    upgradeButton: 'Upgrade',
+    scheduleButton: 'Schedule',
+    saveTemplateButton: 'Save as template',
+    olderHistoryButton: 'Older history',
+    notNowButton: 'Not now',
+    softPaywallTitle: '{feature} is available on Pro',
+    softPaywallBody: 'Upgrade to Pro ($24.99/mo) to use {feature}. This preview is here to measure demand before the feature ships.',
+    scheduleFeature: 'Schedule',
+    templateFeature: 'Saved templates',
+    historyFeature: 'Older history'
   },
   ja: {
     appTitle: '一括価格ルールビルダー',
@@ -148,7 +165,16 @@ const I18N = {
     variantsOverCapCurrent: '今回の更新は {variants} variants が対象です。現在のプランは {cap} variants/回 までです。{plan}（{price}/mo）にアップグレードすると、このプレビューのまま実行できます。',
     tasksOverCap: '今月の無料実行回数 {cap} 回は使い切りました。Standard（$9.99/mo）にアップグレードすると、このプレビューを実行できます。',
     tasksOverCapCurrent: '今月の実行回数 {cap} 回は使い切りました。{plan}（{price}/mo）にアップグレードすると、このプレビューを実行できます。',
-    upgradeButton: 'アップグレード'
+    upgradeButton: 'アップグレード',
+    scheduleButton: 'スケジュール',
+    saveTemplateButton: 'テンプレート保存',
+    olderHistoryButton: '過去履歴',
+    notNowButton: 'あとで',
+    softPaywallTitle: '{feature} は Pro で利用できます',
+    softPaywallBody: 'Pro（$24.99/mo）にアップグレードすると {feature} を利用できます。この入口は機能公開前の需要計測も兼ねています。',
+    scheduleFeature: 'スケジュール',
+    templateFeature: 'テンプレート保存',
+    historyFeature: '過去履歴'
   }
 };
 
@@ -644,6 +670,28 @@ function renderPaywall(usage) {
   trackPaywallEvent('paywall_shown', { paywall_kind: paywall.kind });
 }
 
+function buildUpgradeUrl(plan = 'pro') {
+  const url = new URL('/billing/upgrade', window.location.origin);
+  url.searchParams.set('plan', plan);
+  const shop = getShop();
+  if (shop) url.searchParams.set('shop', shop);
+  return url.toString();
+}
+
+function showSoftPaywall({ featureKey, paywallKind }) {
+  const feature = t(featureKey);
+  softPaywallTitleEl.textContent = t('softPaywallTitle', { feature });
+  softPaywallBodyEl.textContent = t('softPaywallBody', { feature });
+  softPaywallUpgradeEl.href = buildUpgradeUrl('pro');
+  softPaywallUpgradeEl.textContent = t('upgradeButton');
+  softPaywallModalEl.classList.remove('hidden');
+  trackPaywallEvent('paywall_shown', { paywall_kind: paywallKind });
+}
+
+function hideSoftPaywall() {
+  softPaywallModalEl.classList.add('hidden');
+}
+
 function renderSim(data) {
   summaryEl.innerHTML = `<b>${t('summaryLabel')}</b>: total=${data.summary.totalVariants}, changed=${data.summary.changedVariants}`;
   renderPaywall(data.usage);
@@ -688,6 +736,25 @@ connectShopBtn.onclick = () => {
     return;
   }
   window.location.href = getAuthUrl(shop);
+};
+scheduleToggleBtn.onclick = () => showSoftPaywall({
+  featureKey: 'scheduleFeature',
+  paywallKind: 'schedule_pro_required'
+});
+saveTemplateBtn.onclick = () => showSoftPaywall({
+  featureKey: 'templateFeature',
+  paywallKind: 'template_pro_required'
+});
+olderHistoryBtn.onclick = () => showSoftPaywall({
+  featureKey: 'historyFeature',
+  paywallKind: 'history_pro_required'
+});
+softPaywallCloseBtn.onclick = hideSoftPaywall;
+softPaywallModalEl.onclick = event => {
+  if (event.target === softPaywallModalEl) hideSoftPaywall();
+};
+softPaywallUpgradeEl.onclick = () => {
+  trackPaywallEvent('paywall_clicked_upgrade', { target_plan: 'pro' });
 };
 
 document.getElementById('simulate').onclick = async () => {

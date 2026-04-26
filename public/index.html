@@ -34,6 +34,12 @@
           <button id="addRule" type="button" data-i18n="addRuleButton">+ Rule</button>
         </div>
 
+        <div class="featureActions" aria-label="Pro feature previews">
+          <button id="scheduleToggle" type="button" class="secondary" data-i18n="scheduleButton">Schedule</button>
+          <button id="saveTemplate" type="button" class="secondary" data-i18n="saveTemplateButton">Save as template</button>
+          <button id="olderHistory" type="button" class="secondary" data-i18n="olderHistoryButton">Older history</button>
+        </div>
+
         <div id="rules"></div>
 
         <div id="paywall" class="paywall hidden"></div>
@@ -95,6 +101,17 @@
         </div>
       </div>
     </template>
+
+    <div id="softPaywallModal" class="modalBackdrop hidden" role="dialog" aria-modal="true" aria-labelledby="softPaywallTitle">
+      <div class="modalCard">
+        <h2 id="softPaywallTitle"></h2>
+        <p id="softPaywallBody"></p>
+        <div class="row">
+          <a id="softPaywallUpgrade" class="modalPrimary" href="/billing/upgrade?plan=pro"></a>
+          <button id="softPaywallClose" type="button" data-i18n="notNowButton">Not now</button>
+        </div>
+      </div>
+    </div>
 
     <script type="module" src="/app.js"></script>
   </body>
