@@ -396,7 +396,7 @@ fail 0
 ## P1-6 Usage meter widget
 
 Branch: `codex/p1-6-usage-meter`
-PR: 未作成
+PR: `#12`
 
 ### 変更内容
 
