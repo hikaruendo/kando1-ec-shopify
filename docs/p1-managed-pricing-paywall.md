@@ -168,7 +168,7 @@ fail 0
 ## P1-3 Usage metering
 
 Branch: `codex/p1-3-usage-metering`
-PR: 未作成
+PR: `#9`
 
 ### 変更内容
 
