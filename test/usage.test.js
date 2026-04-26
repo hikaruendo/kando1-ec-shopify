@@ -65,7 +65,14 @@ test('usage service resets by UTC month and returns remaining plan capacity', as
       affectedVariantsInThisPreview: 99,
       monthlyTasksUsed: 1,
       monthlyTasksRemaining: 2,
-      affectedVariantsTotalThisMonth: 10
+      affectedVariantsTotalThisMonth: 10,
+      paywall: {
+        kind: null,
+        shouldBlockApply: false,
+        suggestedPlan: null,
+        suggestedPlanPrice: null,
+        upgradeUrl: null
+      }
     });
   } finally {
     await db.cleanup();

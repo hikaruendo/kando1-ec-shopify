@@ -57,6 +57,22 @@ button { cursor: pointer; }
 .table { width: 100%; border-collapse: collapse; font-size: 13px; }
 .table th, .table td { border-bottom: 1px solid #ececec; padding: 8px; text-align: left; }
 .changed { color: #b00020; font-weight: 600; }
+.paywall {
+  border: 1px solid #f2c94c;
+  background: #fff8df;
+  border-radius: 10px;
+  padding: 12px;
+  margin: 12px 0;
+}
+.paywall p { margin: 0 0 10px; line-height: 1.45; }
+.paywall a {
+  display: inline-block;
+  background: #111;
+  color: #fff;
+  border-radius: 8px;
+  padding: 8px 10px;
+  text-decoration: none;
+}
 #result { overflow-x: auto; }
 
 @media (max-width: 760px) {
