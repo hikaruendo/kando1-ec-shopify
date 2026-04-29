@@ -424,7 +424,7 @@ PR: `#11`
 - `/api/usage` endpoint を追加した。
 - app 起動時に usage を取得し、現在 plan と今月の残量を表示する。
 - Apply 成功後に usage meter を再取得する。
-- tasks と variants の progress bar を追加した。
+- tasks の progress bar と variants cap のテキスト表示を追加した。
 - upgrade CTA は current plan に応じて Standard / Pro へ向ける。
 - mobile では widget を1カラムに落として横はみ出しを避ける。
 - UI 文言は JA/EN の i18n に追加した。
@@ -460,7 +460,7 @@ PR: `#11`
 - [x] app 起動時に usage meter を読み込む。
 - [x] Apply 成功後に usage meter を更新する。
 - [x] 現在 plan、残り tasks、variants cap を表示する。
-- [x] progress bar 2本を表示する。
+- [x] tasks progress bar と variants cap テキストを表示する。
 - [x] mobile で1カラム表示にする。
 
 ### Verification
@@ -732,3 +732,8 @@ fail 0
 残作業:
 
 - なし。P1 の公開前 blocker は解消済み。
+
+2026-04-29 追記:
+
+- Option 3 対応に合わせて `docs/listing-copy.md` と README の listing 文案を更新した。
+- Partner Dashboard の English / Japanese listing は、次回編集時に source of truth と同期する。

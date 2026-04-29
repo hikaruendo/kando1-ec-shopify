@@ -9,7 +9,7 @@ MVP-B: 大量バリアント向け価格一括更新アプリ（まずはAPI土�
 - `POST /api/jobs/:jobId/undo` 直前ジョブ復元
 - ルールビルダーUI（`GET /`）:
   - 条件演算子 `in`（複数値）対応
-  - `in` 条件の候補値チェックボックス選択（option1/option2/title）
+  - `in` 条件の候補値チェックボックス選択（option1/option2/option3）
   - `Pick` ボタンで開く value picker（他操作では閉じない）
   - App Bridge Resource Picker による商品選択（Product ID手入力を削減）
   - モバイル崩れ修正、入力欄幅・placeholder可読性改善
@@ -216,9 +216,9 @@ curl -X POST http://localhost:8787/api/simulate \
 
 ### 英語 listing 文案
 - App introduction:
-  - `Bulk-edit variant prices across size/color combinations with preview and safe rollback.`
+  - `Bulk-edit variant prices across size/color/material combinations with preview and safe rollback.`
 - App details:
-  - `Update variant prices across size, color, and other option combinations without editing each variant one by one. Kando1 Variant Bulk Editor lets you build rules, preview the exact variants that will change, and apply only the differences.`
+  - `Update variant prices across size, color, material, and other option combinations without editing each variant one by one. Kando1 Variant Bulk Editor lets you build rules, preview the exact variants that will change, and apply only the differences.`
   - `Use it when a product has many variants and you need a controlled way to adjust prices for selected combinations. Each run keeps a job history so recent changes can be reviewed and rolled back when needed.`
 - Key benefits:
   - `Save time on repeated variant price updates across option combinations.`
@@ -226,16 +226,16 @@ curl -X POST http://localhost:8787/api/simulate \
   - `Reduce accidental edits by updating only variants that match your rules.`
   - `Roll back retained jobs when a price change needs to be restored.`
 - Screenshot captions:
-  - `Build a rule with size, color, title, and other variant conditions.`
+  - `Build a rule with size, color, material, and other option conditions.`
   - `Preview every affected variant before applying a price change.`
   - `Apply only changed variants and review the completed job summary.`
   - `Track usage and job history from the embedded app home.`
 
 ### 日本語 listing 文案
 - App introduction:
-  - `サイズ・カラーなど複数条件でバリアント価格を一括更新。プレビュー付きで安全に実行。`
+  - `サイズ・カラー・素材など複数条件でバリアント価格を一括更新。プレビュー付きで安全に実行。`
 - App details:
-  - `サイズ、カラー、その他のオプション条件を組み合わせて、バリアント価格をまとめて更新できます。Kando1 Variant Bulk Editor では、ルールを作成し、変更対象のバリアントを事前に確認してから、差分だけを反映できます。`
+  - `サイズ、カラー、素材、その他のオプション条件を組み合わせて、バリアント価格をまとめて更新できます。Kando1 Variant Bulk Editor では、ルールを作成し、変更対象のバリアントを事前に確認してから、差分だけを反映できます。`
   - `多くのバリアントを持つ商品の価格調整を、手作業ではなく管理された手順で進めたい場合に使えます。各実行はジョブ履歴として残り、必要に応じて保持中の変更を確認・復元できます。`
 - Key benefits:
   - `オプション条件をまたいだバリアント価格更新の手間を減らせます。`
@@ -243,7 +243,7 @@ curl -X POST http://localhost:8787/api/simulate \
   - `ルールに一致したバリアントだけを更新し、意図しない編集を減らせます。`
   - `保持中のジョブ履歴から、必要な価格変更を復元できます。`
 - Screenshot captions:
-  - `サイズ、カラー、タイトルなどの条件を組み合わせてルールを作成。`
+  - `サイズ、カラー、素材などのオプション条件を組み合わせてルールを作成。`
   - `価格変更を反映する前に、対象バリアントを一覧で確認。`
   - `差分だけを反映し、完了したジョブの結果を確認。`
   - `埋め込みアプリのホームで usage とジョブ履歴を確認。`
@@ -266,7 +266,7 @@ curl -X POST http://localhost:8787/api/simulate \
 - Core flow:
   - `Open the app from Shopify Admin > Apps`
   - `Pick a product with variants`
-  - `Create a rule using in (multi-select) for Option 1 and Option 2`
+  - `Create a rule using in (multi-select) for Option 1, Option 2, or Option 3`
   - `Click Preview and confirm changed variants`
   - `Click Apply and confirm errors=0`
 - Notes for reviewer:
