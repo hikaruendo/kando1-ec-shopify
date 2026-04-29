@@ -709,6 +709,8 @@ function renderPaywall(usage) {
   const shop = getShop();
   if (shop) upgradeUrl.searchParams.set('shop', shop);
   link.href = upgradeUrl.toString();
+  link.target = '_top';
+  link.rel = 'noopener';
   link.textContent = t('upgradeButton');
   link.onclick = () => {
     trackPaywallEvent('paywall_clicked_upgrade', {
