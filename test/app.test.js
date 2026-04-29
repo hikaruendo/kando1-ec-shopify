@@ -145,6 +145,40 @@ test('second successful apply returns review prompt request once', async () => {
   }
 });
 
+test('apply supports option3 conditions while preserving job snapshots', async () => {
+  const db = await createTempDb();
+  try {
+    const createApp = await loadCreateApp();
+    const app = await createApp({ sqlitePath: db.sqlitePath });
+
+    const applyResponse = await request(app)
+      .post('/api/apply')
+      .send({
+        shop: 'alpha-shop.myshopify.com',
+        productId: 'gid://shopify/Product/123',
+        rules: [
+          {
+            priority: 1,
+            conditions: [{ field: 'option3', op: 'equals', value: 'Gloss' }],
+            action: { type: 'add', value: 50 }
+          }
+        ]
+      });
+
+    assert.equal(applyResponse.status, 200);
+    assert.equal(applyResponse.body.changedCount, 2);
+    assert.equal(applyResponse.body.errorCount, 0);
+
+    const job = getJobWithSnapshots(applyResponse.body.jobId);
+    assert.deepStrictEqual(job.snapshots, [
+      { variantId: 'v3', beforePrice: '1000', afterPrice: '1050' },
+      { variantId: 'v4', beforePrice: '1300', afterPrice: '1350' }
+    ]);
+  } finally {
+    await db.cleanup();
+  }
+});
+
 test('webhooks reject invalid signatures and clean up persisted shop data without logging payload bodies', async () => {
   const db = await createTempDb();
   const logs = [];

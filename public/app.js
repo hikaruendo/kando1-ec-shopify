@@ -85,7 +85,7 @@ const I18N = {
     pickValuesButton: 'Pick',
     fieldOption1: 'Option 1',
     fieldOption2: 'Option 2',
-    fieldTitle: 'Title',
+    fieldOption3: 'Option 3',
     opEquals: 'equals',
     opContains: 'contains',
     opStartsWith: 'startsWith',
@@ -166,7 +166,7 @@ const I18N = {
     pickValuesButton: '選択',
     fieldOption1: 'オプション1',
     fieldOption2: 'オプション2',
-    fieldTitle: 'タイトル',
+    fieldOption3: 'オプション3',
     opEquals: '一致',
     opContains: '含む',
     opStartsWith: '前方一致',
@@ -391,17 +391,17 @@ function indexCandidateValues(diffs) {
   const values = {
     option1: new Set(),
     option2: new Set(),
-    title: new Set()
+    option3: new Set()
   };
   for (const row of diffs || []) {
     values.option1.add(String(row.option1 ?? '').trim());
     values.option2.add(String(row.option2 ?? '').trim());
-    values.title.add(String(row.title ?? '').trim());
+    values.option3.add(String(row.option3 ?? '').trim());
   }
   return {
     option1: [...values.option1].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja')),
     option2: [...values.option2].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja')),
-    title: [...values.title].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja'))
+    option3: [...values.option3].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja'))
   };
 }
 
@@ -424,7 +424,7 @@ function localizeConditionNode(node) {
   const fieldLabels = {
     option1: t('fieldOption1'),
     option2: t('fieldOption2'),
-    title: t('fieldTitle')
+    option3: t('fieldOption3')
   };
   for (const option of node.querySelectorAll('.field option')) {
     option.textContent = fieldLabels[option.value] || option.value;
@@ -543,7 +543,7 @@ function getNextConditionSeed(container) {
   const usedFields = new Set(
     [...container.querySelectorAll('.condition .field')].map(field => field.value)
   );
-  const field = ['option1', 'option2', 'title'].find(candidate => !usedFields.has(candidate)) || 'option2';
+  const field = ['option1', 'option2', 'option3'].find(candidate => !usedFields.has(candidate)) || 'option2';
   return { field, op: 'in', value: [] };
 }
 

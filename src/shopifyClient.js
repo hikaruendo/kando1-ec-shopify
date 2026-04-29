@@ -59,6 +59,7 @@ export async function fetchVariantsByProductId(productId, context = {}) {
     title: n.title,
     option1: n.selectedOptions?.[0]?.value || '',
     option2: n.selectedOptions?.[1]?.value || '',
+    option3: n.selectedOptions?.[2]?.value || '',
     price: Number(n.price || 0)
   }));
 }
