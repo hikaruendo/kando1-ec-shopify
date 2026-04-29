@@ -16,7 +16,6 @@ test('soft paywall UI exposes Pro feature entry points and tracking kinds', asyn
     'usageTasksLabel',
     'usageTasksBar',
     'usageVariantsLabel',
-    'usageVariantsBar',
     'usageUpgrade',
     'scheduleToggle',
     'saveTemplate',
@@ -61,6 +60,18 @@ test('soft paywall UI exposes Pro feature entry points and tracking kinds', asyn
   assert.match(js, /review_prompt_dismissed/);
   assert.match(js, /buildUpgradeUrl\('pro'\)/);
   assert.match(js, /refreshUsageMeter/);
+  assert.match(js, /getNextConditionSeed/);
+  assert.match(html, /<option value="option3">option3<\/option>/);
+  assert.doesNotMatch(html, /<option value="title">title<\/option>/);
+  assert.match(js, /fieldOption3:/);
+  assert.match(js, /option3: new Set\(\)/);
+  assert.match(js, /\['option1', 'option2', 'option3'\]/);
+  assert.match(js, /seed\.op \?\? 'in'/);
+  assert.match(html, /id="usageUpgrade"[^>]+target="_top"/);
+  assert.match(html, /id="softPaywallUpgrade"[^>]+target="_top"/);
+  assert.doesNotMatch(html, /id="usageVariantsBar"/);
+  assert.match(js, /link\.target = '_top'/);
   assert.match(css, /\.usageMeter/);
+  assert.match(css, /\.usageCapLabel/);
   assert.match(css, /\.modalBackdrop/);
 });

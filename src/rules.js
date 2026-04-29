@@ -52,6 +52,7 @@ export function simulate(variants, rules) {
       title: v.title,
       option1: v.option1,
       option2: v.option2,
+      option3: v.option3,
       beforePrice: before,
       afterPrice: after,
       changed: before !== after

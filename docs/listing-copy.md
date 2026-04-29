@@ -22,11 +22,11 @@
 
 ### App Introduction
 
-Bulk-edit variant prices across size/color combinations with preview and safe rollback.
+Bulk-edit variant prices across size/color/material combinations with preview and safe rollback.
 
 ### App Details
 
-Update variant prices across size, color, and other option combinations without editing each variant one by one. Kando1 Variant Bulk Editor lets you build rules, preview the exact variants that will change, and apply only the differences.
+Update variant prices across size, color, material, and other option combinations without editing each variant one by one. Kando1 Variant Bulk Editor lets you build rules, preview the exact variants that will change, and apply only the differences.
 
 Use it when a product has many variants and you need a controlled way to adjust prices for selected combinations. Each run keeps a job history so recent changes can be reviewed and rolled back when needed.
 
@@ -39,7 +39,7 @@ Use it when a product has many variants and you need a controlled way to adjust 
 
 ### Screenshot Captions
 
-1. Build a rule with size, color, title, and other variant conditions.
+1. Build a rule with size, color, material, and other option conditions.
 2. Preview every affected variant before applying a price change.
 3. Apply only changed variants and review the completed job summary.
 4. Track usage and job history from the embedded app home.
@@ -48,11 +48,11 @@ Use it when a product has many variants and you need a controlled way to adjust 
 
 ### App Introduction
 
-サイズ・カラーなど複数条件でバリアント価格を一括更新。プレビュー付きで安全に実行。
+サイズ・カラー・素材など複数条件でバリアント価格を一括更新。プレビュー付きで安全に実行。
 
 ### App Details
 
-サイズ、カラー、その他のオプション条件を組み合わせて、バリアント価格をまとめて更新できます。Kando1 Variant Bulk Editor では、ルールを作成し、変更対象のバリアントを事前に確認してから、差分だけを反映できます。
+サイズ、カラー、素材、その他のオプション条件を組み合わせて、バリアント価格をまとめて更新できます。Kando1 Variant Bulk Editor では、ルールを作成し、変更対象のバリアントを事前に確認してから、差分だけを反映できます。
 
 多くのバリアントを持つ商品の価格調整を、手作業ではなく管理された手順で進めたい場合に使えます。各実行はジョブ履歴として残り、必要に応じて保持中の変更を確認・復元できます。
 
@@ -65,7 +65,7 @@ Use it when a product has many variants and you need a controlled way to adjust 
 
 ### Screenshot Captions
 
-1. サイズ、カラー、タイトルなどの条件を組み合わせてルールを作成。
+1. サイズ、カラー、素材などのオプション条件を組み合わせてルールを作成。
 2. 価格変更を反映する前に、対象バリアントを一覧で確認。
 3. 差分だけを反映し、完了したジョブの結果を確認。
 4. 埋め込みアプリのホームで usage とジョブ履歴を確認。
@@ -77,4 +77,3 @@ Use it when a product has many variants and you need a controlled way to adjust 
 - 「売上アップ」「CVR 改善」など、検証不能な outcome claim を入れない。
 - 実 UI だけを見せ、ブラウザ枠、OS desktop、個人情報、store 固有の機密情報を入れない。
 - 4枚の screenshot は、それぞれ rule builder、preview、apply result、usage/history など違う状態を示す。
-

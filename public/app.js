@@ -25,7 +25,6 @@ const usageHeadlineEl = document.getElementById('usageHeadline');
 const usageTasksLabelEl = document.getElementById('usageTasksLabel');
 const usageTasksBarEl = document.getElementById('usageTasksBar');
 const usageVariantsLabelEl = document.getElementById('usageVariantsLabel');
-const usageVariantsBarEl = document.getElementById('usageVariantsBar');
 const usageUpgradeEl = document.getElementById('usageUpgrade');
 
 let valueCandidatesCache = null;
@@ -86,7 +85,7 @@ const I18N = {
     pickValuesButton: 'Pick',
     fieldOption1: 'Option 1',
     fieldOption2: 'Option 2',
-    fieldTitle: 'Title',
+    fieldOption3: 'Option 3',
     opEquals: 'equals',
     opContains: 'contains',
     opStartsWith: 'startsWith',
@@ -167,7 +166,7 @@ const I18N = {
     pickValuesButton: '選択',
     fieldOption1: 'オプション1',
     fieldOption2: 'オプション2',
-    fieldTitle: 'タイトル',
+    fieldOption3: 'オプション3',
     opEquals: '一致',
     opContains: '含む',
     opStartsWith: '前方一致',
@@ -392,17 +391,17 @@ function indexCandidateValues(diffs) {
   const values = {
     option1: new Set(),
     option2: new Set(),
-    title: new Set()
+    option3: new Set()
   };
   for (const row of diffs || []) {
     values.option1.add(String(row.option1 ?? '').trim());
     values.option2.add(String(row.option2 ?? '').trim());
-    values.title.add(String(row.title ?? '').trim());
+    values.option3.add(String(row.option3 ?? '').trim());
   }
   return {
     option1: [...values.option1].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja')),
     option2: [...values.option2].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja')),
-    title: [...values.title].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja'))
+    option3: [...values.option3].filter(Boolean).sort((a, b) => a.localeCompare(b, 'ja'))
   };
 }
 
@@ -425,7 +424,7 @@ function localizeConditionNode(node) {
   const fieldLabels = {
     option1: t('fieldOption1'),
     option2: t('fieldOption2'),
-    title: t('fieldTitle')
+    option3: t('fieldOption3')
   };
   for (const option of node.querySelectorAll('.field option')) {
     option.textContent = fieldLabels[option.value] || option.value;
@@ -540,6 +539,14 @@ async function togglePicker(conditionEl) {
   }
 }
 
+function getNextConditionSeed(container) {
+  const usedFields = new Set(
+    [...container.querySelectorAll('.condition .field')].map(field => field.value)
+  );
+  const field = ['option1', 'option2', 'option3'].find(candidate => !usedFields.has(candidate)) || 'option2';
+  return { field, op: 'in', value: [] };
+}
+
 function addCondition(container, seed = {}) {
   const node = conditionTpl.content.firstElementChild.cloneNode(true);
   const opSelect = node.querySelector('.op');
@@ -549,7 +556,7 @@ function addCondition(container, seed = {}) {
   localizeConditionNode(node);
 
   node.querySelector('.field').value = seed.field ?? 'option1';
-  opSelect.value = seed.op ?? 'startsWith';
+  opSelect.value = seed.op ?? 'in';
   node.querySelector('.value').value = serializeConditionValue(seed.value);
 
   fieldSelect.onchange = async () => {
@@ -575,7 +582,7 @@ function addRule(seed = {}) {
   node.querySelector('.actionValue').value = seed.action?.value ?? 0;
 
   node.querySelector('.remove').onclick = () => node.remove();
-  node.querySelector('.addCondition').onclick = () => addCondition(conditionsEl);
+  node.querySelector('.addCondition').onclick = () => addCondition(conditionsEl, getNextConditionSeed(conditionsEl));
 
   const conditions = seed.conditions?.length ? seed.conditions : [{ field: 'option1', op: 'in', value: [] }];
   for (const c of conditions) {
@@ -709,6 +716,8 @@ function renderPaywall(usage) {
   const shop = getShop();
   if (shop) upgradeUrl.searchParams.set('shop', shop);
   link.href = upgradeUrl.toString();
+  link.target = '_top';
+  link.rel = 'noopener';
   link.textContent = t('upgradeButton');
   link.onclick = () => {
     trackPaywallEvent('paywall_clicked_upgrade', {
@@ -759,7 +768,6 @@ function renderUsageMeter(usage) {
   }
 
   usageVariantsLabelEl.textContent = t('usageVariantsLabel', { limit: variantsLimit });
-  setBar(usageVariantsBarEl, 100);
   usageUpgradeEl.href = buildUpgradeUrl(usage.currentPlan === 'free_preview' ? 'standard' : 'pro');
 }
 

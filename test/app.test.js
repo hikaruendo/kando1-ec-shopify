@@ -29,8 +29,10 @@ test('apply -> restart -> get/undo preserves API shape and shop isolation', asyn
       });
 
     assert.equal(applyResponse.status, 200);
+    const jobId = applyResponse.body.jobId;
+    assert.match(jobId, /^job_[0-9a-f-]{36}$/);
     assert.deepStrictEqual(applyResponse.body, {
-      jobId: 'job_000001',
+      jobId,
       status: 'completed',
       changedCount: 3,
       errorCount: 0,
@@ -51,7 +53,7 @@ test('apply -> restart -> get/undo preserves API shape and shop isolation', asyn
         shop: 'alpha-shop.myshopify.com',
         name: 'apply_succeeded',
         payload: {
-          jobId: 'job_000001',
+          jobId,
           changed_count: 3,
           error_count: 0,
           affected_variants: 3
@@ -60,7 +62,7 @@ test('apply -> restart -> get/undo preserves API shape and shop isolation', asyn
     ]);
 
     const expectedJob = {
-      id: 'job_000001',
+      id: jobId,
       shop: 'alpha-shop.myshopify.com',
       status: 'completed',
       productId: 'gid://shopify/Product/123',
@@ -75,7 +77,7 @@ test('apply -> restart -> get/undo preserves API shape and shop isolation', asyn
     };
 
     const jobResponse = await request(app)
-      .get('/api/jobs/job_000001')
+      .get(`/api/jobs/${jobId}`)
       .query({ shop: 'alpha-shop.myshopify.com' });
     assert.equal(jobResponse.status, 200);
     assert.deepStrictEqual(jobResponse.body, expectedJob);
@@ -84,18 +86,18 @@ test('apply -> restart -> get/undo preserves API shape and shop isolation', asyn
     const restartedApp = await createApp({ sqlitePath: db.sqlitePath });
 
     const restartedJobResponse = await request(restartedApp)
-      .get('/api/jobs/job_000001')
+      .get(`/api/jobs/${jobId}`)
       .query({ shop: 'alpha-shop.myshopify.com' });
     assert.equal(restartedJobResponse.status, 200);
     assert.deepStrictEqual(restartedJobResponse.body, expectedJob);
 
     const isolatedResponse = await request(restartedApp)
-      .get('/api/jobs/job_000001')
+      .get(`/api/jobs/${jobId}`)
       .query({ shop: 'beta-shop.myshopify.com' });
     assert.equal(isolatedResponse.status, 404);
 
     const undoResponse = await request(restartedApp)
-      .post('/api/jobs/job_000001/undo')
+      .post(`/api/jobs/${jobId}/undo`)
       .send({ shop: 'alpha-shop.myshopify.com' });
     assert.equal(undoResponse.status, 200);
     assert.deepStrictEqual(undoResponse.body, {
@@ -138,6 +140,40 @@ test('second successful apply returns review prompt request once', async () => {
     assert.equal(second.status, 200);
     assert.deepStrictEqual(first.body.reviewPrompt, { shouldShow: false, trigger: null });
     assert.deepStrictEqual(second.body.reviewPrompt, { shouldShow: true, trigger: 'apply_succeeded' });
+  } finally {
+    await db.cleanup();
+  }
+});
+
+test('apply supports option3 conditions while preserving job snapshots', async () => {
+  const db = await createTempDb();
+  try {
+    const createApp = await loadCreateApp();
+    const app = await createApp({ sqlitePath: db.sqlitePath });
+
+    const applyResponse = await request(app)
+      .post('/api/apply')
+      .send({
+        shop: 'alpha-shop.myshopify.com',
+        productId: 'gid://shopify/Product/123',
+        rules: [
+          {
+            priority: 1,
+            conditions: [{ field: 'option3', op: 'equals', value: 'Gloss' }],
+            action: { type: 'add', value: 50 }
+          }
+        ]
+      });
+
+    assert.equal(applyResponse.status, 200);
+    assert.equal(applyResponse.body.changedCount, 2);
+    assert.equal(applyResponse.body.errorCount, 0);
+
+    const job = getJobWithSnapshots(applyResponse.body.jobId);
+    assert.deepStrictEqual(job.snapshots, [
+      { variantId: 'v3', beforePrice: '1000', afterPrice: '1050' },
+      { variantId: 'v4', beforePrice: '1300', afterPrice: '1350' }
+    ]);
   } finally {
     await db.cleanup();
   }

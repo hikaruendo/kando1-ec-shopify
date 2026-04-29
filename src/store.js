@@ -1,8 +1,9 @@
+import crypto from 'node:crypto';
+
 export const oauthStates = new Map();
-let seq = 1;
 
 export function nextJobId() {
-  return `job_${String(seq++).padStart(6, '0')}`;
+  return `job_${crypto.randomUUID()}`;
 }
 
 export function saveOauthState(state, shop) {
