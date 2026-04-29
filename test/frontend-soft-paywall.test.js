@@ -60,7 +60,8 @@ test('soft paywall UI exposes Pro feature entry points and tracking kinds', asyn
   assert.match(js, /review_prompt_dismissed/);
   assert.match(js, /buildUpgradeUrl\('pro'\)/);
   assert.match(js, /refreshUsageMeter/);
-  assert.match(js, /seed\.field \?\? 'option2'/);
+  assert.match(js, /getNextConditionSeed/);
+  assert.match(js, /\['option1', 'option2', 'title'\]/);
   assert.match(js, /seed\.op \?\? 'in'/);
   assert.match(html, /id="usageUpgrade"[^>]+target="_top"/);
   assert.match(html, /id="softPaywallUpgrade"[^>]+target="_top"/);

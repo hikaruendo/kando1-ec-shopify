@@ -539,6 +539,14 @@ async function togglePicker(conditionEl) {
   }
 }
 
+function getNextConditionSeed(container) {
+  const usedFields = new Set(
+    [...container.querySelectorAll('.condition .field')].map(field => field.value)
+  );
+  const field = ['option1', 'option2', 'title'].find(candidate => !usedFields.has(candidate)) || 'option2';
+  return { field, op: 'in', value: [] };
+}
+
 function addCondition(container, seed = {}) {
   const node = conditionTpl.content.firstElementChild.cloneNode(true);
   const opSelect = node.querySelector('.op');
@@ -547,7 +555,7 @@ function addCondition(container, seed = {}) {
 
   localizeConditionNode(node);
 
-  node.querySelector('.field').value = seed.field ?? 'option2';
+  node.querySelector('.field').value = seed.field ?? 'option1';
   opSelect.value = seed.op ?? 'in';
   node.querySelector('.value').value = serializeConditionValue(seed.value);
 
@@ -574,7 +582,7 @@ function addRule(seed = {}) {
   node.querySelector('.actionValue').value = seed.action?.value ?? 0;
 
   node.querySelector('.remove').onclick = () => node.remove();
-  node.querySelector('.addCondition').onclick = () => addCondition(conditionsEl);
+  node.querySelector('.addCondition').onclick = () => addCondition(conditionsEl, getNextConditionSeed(conditionsEl));
 
   const conditions = seed.conditions?.length ? seed.conditions : [{ field: 'option1', op: 'in', value: [] }];
   for (const c of conditions) {
