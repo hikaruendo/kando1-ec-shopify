@@ -547,8 +547,8 @@ function addCondition(container, seed = {}) {
 
   localizeConditionNode(node);
 
-  node.querySelector('.field').value = seed.field ?? 'option1';
-  opSelect.value = seed.op ?? 'startsWith';
+  node.querySelector('.field').value = seed.field ?? 'option2';
+  opSelect.value = seed.op ?? 'in';
   node.querySelector('.value').value = serializeConditionValue(seed.value);
 
   fieldSelect.onchange = async () => {
