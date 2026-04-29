@@ -15,7 +15,7 @@ MVP-B: 大量バリアント向け価格一括更新アプリ（まずはAPI土�
   - モバイル崩れ修正、入力欄幅・placeholder可読性改善
 - Shopify連携:
   - OAuth最小導線（`/auth` → `/auth/callback`）
-  - shop単位アクセストークン管理（メモリ）
+  - shop単位アクセストークン管理（SQLite永続化）
   - スコープ: `read_products,write_products`
   - 価格更新は Admin GraphQL `productVariantsBulkUpdate` を利用
   - Shopify Admin 埋め込み起動時は URL の `shop` を自動利用（通常は Shop Domain 入力不要）

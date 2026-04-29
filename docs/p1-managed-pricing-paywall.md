@@ -69,7 +69,7 @@ Future plans:
 - [x] README に Partner Dashboard 設定手順と Founding 10 store 追加手順を記載した。
 - [x] Partner Dashboard で public plans と Founding 10 private plan の draft 設定を実施した。
 - [x] public listing の Pricing section に `Free Preview` と `Standard` が表示されることを確認した。
-- [ ] Founding 10 private plan が authorized dev store の admin から選択できることは追加確認が必要。
+- [x] Founding 10 private plan が authorized dev store の admin から選択できることを確認した。
 
 ### Verification
 
@@ -85,6 +85,26 @@ managed-pricing.json ok
 tests 7
 pass 7
 fail 0
+```
+
+### Manual verification
+
+2026-04-26 に dev store admin の plan selection page で確認した。
+
+- URL: `https://admin.shopify.com/store/bulk-update-products/charges/bulk-update-products-3/pricing_plans`
+- 表示確認: `Founding 10`, `Free Preview`, `Standard`
+- `Founding 10` は `$7 / 30 days`、`Created for you` として表示された。
+- `Founding 10` の承認画面で `You will not be billed for this test charge.` を確認した。
+- ユーザー確認後、`Founding 10` test subscription を承認した。
+- Shopify Admin GraphQL で active subscription を確認した。
+
+```json
+{
+  "id": "gid://shopify/AppSubscription/31556894883",
+  "name": "Founding 10",
+  "status": "ACTIVE",
+  "test": true
+}
 ```
 
 ## P1-2 Billing check middleware
@@ -168,7 +188,7 @@ fail 0
 ## P1-3 Usage metering
 
 Branch: `codex/p1-3-usage-metering`
-PR: `#9`
+PR: `#8`
 
 ### 変更内容
 
@@ -254,7 +274,7 @@ fail 0
 ## P1-4 Hard paywall
 
 Branch: `codex/p1-4-hard-paywall`
-PR: `#10`
+PR: `#9`
 
 ### 変更内容
 
@@ -347,7 +367,7 @@ fail 0
 ## P1-5 Soft paywall
 
 Branch: `codex/p1-5-soft-paywall`
-PR: `#11`
+PR: `#10`
 
 ### 変更内容
 
@@ -396,7 +416,7 @@ fail 0
 ## P1-6 Usage meter widget
 
 Branch: `codex/p1-6-usage-meter`
-PR: `#12`
+PR: `#11`
 
 ### 変更内容
 
@@ -460,7 +480,7 @@ fail 0
 ## P1-7 Uninstall webhook / GDPR webhooks
 
 Branch: `codex/p1-7-webhook-compliance`
-PR: 未作成
+PR: `#12`
 
 ### 変更内容
 
@@ -516,7 +536,7 @@ uri = "/webhooks"
 - [x] `customers/data_request` は no-op `200`。
 - [x] `customers/redact` は no-op `200`。
 - [x] customer payload の email / phone をログに残さない。
-- [ ] Shopify CLI webhook testing は本番 app config deploy 後に手動確認が必要。
+- [x] Shopify CLI webhook testing は本番 app config deploy 後に手動確認済み。
 
 ### Verification
 
@@ -547,6 +567,22 @@ npm test
 ```
 
 Shopify CLI の webhook testing は、Partner Dashboard / Shopify CLI の対象 app config が本番 app と一致している状態で実施する。
+
+2026-04-26 に本番 `https://kando1-bulk-pricing.fly.dev/webhooks` 宛で確認済み。
+
+確認 topics:
+
+- `app/uninstalled`
+- `shop/redact`
+- `customers/data_request`
+- `customers/redact`
+
+結果:
+
+- Shopify CLI の `shopify app webhook trigger` は4 topics すべて enqueue 成功。
+- Fly logs で4 topics の受信を確認。
+- 自前 smoke test で valid HMAC は `200`、invalid HMAC は `401` を確認。
+- customer payload の raw email / phone をログに残さないことを確認。
 
 ## P1-8 Review prompt trigger
 
@@ -647,6 +683,7 @@ Shopify docs で App Store listing requirements と best practices を確認し�
 - [x] details 先頭2文相当、key benefits 4件、screenshots captions 4件を JA / EN で揃えた。
 - [x] pricing / reviews / 誇大な outcome を screenshot に入れない原則を明記した。
 - [x] README の `App Listing 下書き` セクションを更新した。
+- [x] Partner Dashboard の English listing に EN copy を反映して保存した。
 
 ### Verification
 
@@ -661,3 +698,37 @@ tests 23
 pass 23
 fail 0
 ```
+
+### Manual verification
+
+2026-04-26 に Partner Dashboard の English listing を更新し、`App listing saved` を確認した。
+
+反映済み:
+
+- App introduction
+- App details
+- Features 4件
+- 既存 desktop screenshots 3枚分の alt text
+
+2026-04-26 に追加で Japanese listing を公開前チェックし、Dashboard 上で `Incomplete` を解消した。
+
+追加反映済み:
+
+- Japanese listing の App name / App introduction / App details / Features
+- Japanese listing の desktop screenshots 4枚分と alt text
+- Feature media を画像に変更し、4枚目画像を反映
+- Support email / support URL / privacy policy URL
+- Merchant review email: `contact@kando1.com`
+- App discovery content: subtitle と search terms
+- Pricing details: `無料プレビュー` / `スタンダード`
+
+公開状態:
+
+- App Store listing: `Published`
+- Published languages: `English`, `Japanese`
+- App Store visibility: `Fully visible`
+- Listing URL: `https://apps.shopify.com/bulk-update-products`
+
+残作業:
+
+- なし。P1 の公開前 blocker は解消済み。
