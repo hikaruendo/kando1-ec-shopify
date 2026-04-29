@@ -25,7 +25,6 @@ const usageHeadlineEl = document.getElementById('usageHeadline');
 const usageTasksLabelEl = document.getElementById('usageTasksLabel');
 const usageTasksBarEl = document.getElementById('usageTasksBar');
 const usageVariantsLabelEl = document.getElementById('usageVariantsLabel');
-const usageVariantsBarEl = document.getElementById('usageVariantsBar');
 const usageUpgradeEl = document.getElementById('usageUpgrade');
 
 let valueCandidatesCache = null;
@@ -761,7 +760,6 @@ function renderUsageMeter(usage) {
   }
 
   usageVariantsLabelEl.textContent = t('usageVariantsLabel', { limit: variantsLimit });
-  setBar(usageVariantsBarEl, 100);
   usageUpgradeEl.href = buildUpgradeUrl(usage.currentPlan === 'free_preview' ? 'standard' : 'pro');
 }
 
